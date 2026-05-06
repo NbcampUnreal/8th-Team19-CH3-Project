@@ -1,0 +1,39 @@
+# --- Unreal Engine 관련 임시/빌드 파일 ---
+Binaries/
+Build/
+DerivedDataCache/
+Intermediate/
+Saved/
+.vscode/
+.vs/
+FileOpenOrder/
+
+# --- 호스트/로컬 설정 (팀원마다 다름) ---
+*.xcworkspace
+*.sln
+*.suo
+*.opensdf
+*.sdf
+*.VC.db
+*.VC.opendb
+
+# --- 에디터 내부 생성 파일 ---
+DerivedDataCache/
+Intermediate/
+Saved/
+
+# --- 블루프린트/에셋 관련 임시 파일 ---
+*.ignore
+*.ucode
+*.utxt
+
+# --- 외부 툴 (Rider, CLion 등) ---
+.idea/
+.clion.source.upload.marker
+
+# --- 빌드 결과물 (패키징) ---
+/Build/
+
+# --- 시스템 파일 ---
+.DS_Store
+Thumbs.db
