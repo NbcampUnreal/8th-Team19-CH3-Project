@@ -18,81 +18,53 @@ DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
 ASpartaSurvivalCharacter::ASpartaSurvivalCharacter()
 {
-	// Tick 활성화 (매 프레임 상태 갱신에 필요)
-	PrimaryActorTick.bCanEverTick = true;
-
-	// ─── 콜리전 캡슐 ───────────────────────────────────────────────
-	GetCapsuleComponent()->InitCapsuleSize(DefaultCapsuleRadius, DefaultCapsuleHalfHeight);
-
-	// ─── 컨트롤러 회전 설정 ────────────────────────────────────────
-	// 컨트롤러 회전을 캐릭터 회전에 직접 반영하지 않습니다.
-	// 카메라 붐만 컨트롤러를 따라 회전하고, 캐릭터는 이동 방향을 향합니다.
+	// Set size for collision capsule
+	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
+		
+	// Don't rotate when the controller rotates. Let that just affect the camera.
 	bUseControllerRotationPitch = false;
-	bUseControllerRotationYaw   = false;
-	bUseControllerRotationRoll  = false;
+	bUseControllerRotationYaw = false;
+	bUseControllerRotationRoll = false;
 
-	// ─── 이동 컴포넌트 설정 ────────────────────────────────────────
-	UCharacterMovementComponent* MovComp = GetCharacterMovement();
-	MovComp->bOrientRotationToMovement = true;           // 이동 방향으로 캐릭터 회전
-	MovComp->RotationRate               = FRotator(0.f, 500.f, 0.f);
-	MovComp->JumpZVelocity              = 700.f;
-	MovComp->AirControl                 = 0.35f;
-	MovComp->MaxWalkSpeed               = WalkSpeed;     // 걷기 속도로 초기화
-	MovComp->MinAnalogWalkSpeed         = 20.f;
-	MovComp->BrakingDecelerationWalking = 2000.f;
-	MovComp->BrakingDecelerationFalling = 1500.f;
-	MovComp->NavAgentProps.bCanCrouch   = true;  // 언리얼 내장 크라우치 활성화
+	// Configure character movement
+	GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the direction of input...	
+	GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f); // ...at this rotation rate
 
-	// ─── 카메라 붐 ─────────────────────────────────────────────────
+	// Note: For faster iteration times these variables, and many more, can be tweaked in the Character Blueprint
+	// instead of recompiling to adjust them
+	GetCharacterMovement()->JumpZVelocity = 700.f;
+	GetCharacterMovement()->AirControl = 0.35f;
+	GetCharacterMovement()->MaxWalkSpeed = 500.f;
+	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
+	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
+	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
+
+	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
-	CameraBoom->TargetArmLength      = 400.f;
-	CameraBoom->bUsePawnControlRotation = true; // 컨트롤러(마우스)에 따라 붐 회전
+	CameraBoom->TargetArmLength = 400.0f; // The camera follows at this distance behind the character	
+	CameraBoom->bUsePawnControlRotation = true; // Rotate the arm based on the controller
 
-	// ─── 팔로우 카메라 ─────────────────────────────────────────────
+	// Create a follow camera
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
-	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
-	FollowCamera->bUsePawnControlRotation = false; // 붐 기준으로 고정, 별도 회전 없음
+	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
+	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
+
+	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
+	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 }
 
 //////////////////////////////////////////////////////////////////////////
-// 라이프사이클
-
-void ASpartaSurvivalCharacter::BeginPlay()
-{
-	Super::BeginPlay();
-
-	// 초기 캡슐 크기 및 이동 속도 적용
-	AdjustCapsuleSize();
-	ApplyMovementSpeed();
-}
-
-void ASpartaSurvivalCharacter::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-	// 매 프레임 이동 상태를 갱신합니다.
-	UpdateMovementState();
-
-	// ── 앉기 시 카메라 높이 부드럽게 보간 ────────────────────────
-	// 목표 Z 오프셋: 앉으면 CrouchCameraZOffset, 일어서면 0
-	float TargetCameraZ = bIsCrouched ? CrouchCameraZOffset : 0.f;
-	FVector CurrentOffset = CameraBoom->GetRelativeLocation();
-	float SmoothedZ = FMath::FInterpTo(CurrentOffset.Z, TargetCameraZ, DeltaTime, CrouchCameraInterpSpeed);
-	CameraBoom->SetRelativeLocation(FVector(CurrentOffset.X, CurrentOffset.Y, SmoothedZ));
-}
-
-//////////////////////////////////////////////////////////////////////////
-// 입력 설정
+// Input
 
 void ASpartaSurvivalCharacter::NotifyControllerChanged()
 {
 	Super::NotifyControllerChanged();
 
+	// Add Input Mapping Context
 	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
 	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem =
-			ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
 		{
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
@@ -101,207 +73,57 @@ void ASpartaSurvivalCharacter::NotifyControllerChanged()
 
 void ASpartaSurvivalCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
-	if (UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(PlayerInputComponent))
-	{
-		// ── 점프 ──────────────────────────────────────────────────
-		EIC->BindAction(JumpAction, ETriggerEvent::Started,   this, &ACharacter::Jump);
-		EIC->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
+	// Set up action bindings
+	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent)) {
+		
+		// Jumping
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 
-		// ── 이동 ──────────────────────────────────────────────────
-		EIC->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ASpartaSurvivalCharacter::Move);
-		EIC->BindAction(MoveAction, ETriggerEvent::Completed, this, &ASpartaSurvivalCharacter::StopMove);
+		// Moving
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ASpartaSurvivalCharacter::Move);
 
-		// ── 시점 조작 ─────────────────────────────────────────────
-		EIC->BindAction(LookAction, ETriggerEvent::Triggered, this, &ASpartaSurvivalCharacter::Look);
-
-		// ── 달리기 (Shift) ────────────────────────────────────────
-		// SprintAction은 언리얼 에디터에서 Input Action 에셋을 새로 만들고
-		// DefaultMappingContext에 Left Shift 키를 매핑해야 합니다.
-		if (SprintAction)
-		{
-			EIC->BindAction(SprintAction, ETriggerEvent::Started,   this, &ASpartaSurvivalCharacter::StartSprint);
-			EIC->BindAction(SprintAction, ETriggerEvent::Completed, this, &ASpartaSurvivalCharacter::StopSprint);
-		}
-		else
-		{
-			UE_LOG(LogTemplateCharacter, Warning,
-				TEXT("[%s] SprintAction이 설정되지 않았습니다. "
-				     "에디터에서 SprintAction Input Action 에셋을 할당해 주세요."),
-				*GetNameSafe(this));
-		}
-
-		// ── 앉기 (Ctrl) ───────────────────────────────────────────
-		if (CrouchAction)
-		{
-			EIC->BindAction(CrouchAction, ETriggerEvent::Started,   this, &ASpartaSurvivalCharacter::StartCrouch);
-			EIC->BindAction(CrouchAction, ETriggerEvent::Completed, this, &ASpartaSurvivalCharacter::StopCrouch);
-		}
-		else
-		{
-			UE_LOG(LogTemplateCharacter, Warning,
-				TEXT("[%s] CrouchAction이 설정되지 않았습니다. "
-				     "에디터에서 CrouchAction Input Action 에셋을 할당해 주세요."),
-				*GetNameSafe(this));
-		}
+		// Looking
+		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ASpartaSurvivalCharacter::Look);
 	}
 	else
 	{
-		UE_LOG(LogTemplateCharacter, Error,
-			TEXT("[%s] EnhancedInputComponent를 찾을 수 없습니다!"), *GetNameSafe(this));
+		UE_LOG(LogTemplateCharacter, Error, TEXT("'%s' Failed to find an Enhanced Input component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."), *GetNameSafe(this));
 	}
 }
 
-//////////////////////////////////////////////////////////////////////////
-// 입력 핸들러
-
 void ASpartaSurvivalCharacter::Move(const FInputActionValue& Value)
 {
+	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
-	bHasMovementInput = !MovementVector.IsNearlyZero();
 
-	// 앞 방향(+Y)으로 이동 중인 경우에만 달리기를 허용합니다.
-	bIsMovingForward = MovementVector.Y > 0.f;
-
-	if (Controller && bHasMovementInput)
+	if (Controller != nullptr)
 	{
-		// 컨트롤러 Yaw 방향 기준으로 전/우 벡터를 계산합니다.
-		const FRotator YawRotation(0.f, Controller->GetControlRotation().Yaw, 0.f);
-		const FVector  ForwardDir = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-		const FVector  RightDir   = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+		// find out which way is forward
+		const FRotator Rotation = Controller->GetControlRotation();
+		const FRotator YawRotation(0, Rotation.Yaw, 0);
 
-		AddMovementInput(ForwardDir, MovementVector.Y);
-		AddMovementInput(RightDir,   MovementVector.X);
+		// get forward vector
+		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+	
+		// get right vector 
+		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+
+		// add movement 
+		AddMovementInput(ForwardDirection, MovementVector.Y);
+		AddMovementInput(RightDirection, MovementVector.X);
 	}
 }
 
 void ASpartaSurvivalCharacter::Look(const FInputActionValue& Value)
 {
-	FVector2D LookAxis = Value.Get<FVector2D>();
-	if (Controller)
+	// input is a Vector2D
+	FVector2D LookAxisVector = Value.Get<FVector2D>();
+
+	if (Controller != nullptr)
 	{
-		AddControllerYawInput(LookAxis.X);
-		AddControllerPitchInput(LookAxis.Y);
+		// add yaw and pitch input to controller
+		AddControllerYawInput(LookAxisVector.X);
+		AddControllerPitchInput(LookAxisVector.Y);
 	}
-}
-
-void ASpartaSurvivalCharacter::StopMove()
-{
-	bHasMovementInput = false;
-	bIsMovingForward  = false;
-}
-
-void ASpartaSurvivalCharacter::StartSprint()
-{
-	bSprintKeyHeld = true;
-}
-
-void ASpartaSurvivalCharacter::StopSprint()
-{
-	bSprintKeyHeld = false;
-}
-
-void ASpartaSurvivalCharacter::StartCrouch()
-{
-	bCrouchKeyHeld = true;
-	bSprintKeyHeld = false; // 앉기 시작 시 달리기 강제 해제
-	Crouch();               // 언리얼 내장 크라우치 (Is Crouching = true)
-}
-
-void ASpartaSurvivalCharacter::StopCrouch()
-{
-	bCrouchKeyHeld = false;
-	UnCrouch();             // 언리얼 내장 크라우치 해제
-}
-
-//////////////////////////////////////////////////////////////////////////
-// 이동 상태 관리
-
-void ASpartaSurvivalCharacter::UpdateMovementState()
-{
-	// ── 공중 여부 확인 ────────────────────────────────────────────
-	bIsInAir = GetCharacterMovement()->IsFalling();
-
-	// ── 수평 이동 속력 계산 ───────────────────────────────────────
-	FVector Velocity   = GetVelocity();
-	Velocity.Z         = 0.f;
-	CurrentSpeed       = Velocity.Size();
-	bIsMoving          = CurrentSpeed > 10.f;
-
-	// ── 언리얼 내장 크라우치 상태를 직접 읽습니다 ─────────────────
-	// bCrouchKeyHeld 대신 엔진이 관리하는 bIsCrouched 사용
-	bIsCrouching = bIsCrouched;
-
-	// ── 달리기 가능 여부 ──────────────────────────────────────────
-	bIsSprinting = bSprintKeyHeld && bIsMovingForward && !bIsInAir && !bIsCrouching;
-
-	// ── 상태 결정 ─────────────────────────────────────────────────
-	EMovementState PrevState = MovementState;
-
-	if (bIsInAir)
-	{
-		MovementState = (GetVelocity().Z > 0.f)
-			? EMovementState::Jumping
-			: EMovementState::Falling;
-	}
-	else if (bIsCrouching)
-	{
-		MovementState = EMovementState::Crouching;
-	}
-	else if (bIsSprinting)
-	{
-		MovementState = EMovementState::Sprinting;
-	}
-	else if (bIsMoving)
-	{
-		MovementState = EMovementState::Walking;
-	}
-	else
-	{
-		MovementState = EMovementState::Idle;
-	}
-
-	// 상태가 바뀐 경우에만 속도·캡슐을 재적용합니다.
-	if (MovementState != PrevState)
-	{
-		ApplyMovementSpeed();
-		AdjustCapsuleSize();
-	}
-}
-
-void ASpartaSurvivalCharacter::ApplyMovementSpeed()
-{
-	float TargetSpeed;
-	if      (MovementState == EMovementState::Sprinting)  TargetSpeed = SprintSpeed;
-	else if (MovementState == EMovementState::Crouching)  TargetSpeed = CrouchSpeed;
-	else                                                   TargetSpeed = WalkSpeed;
-
-	GetCharacterMovement()->MaxWalkSpeed = TargetSpeed;
-}
-
-void ASpartaSurvivalCharacter::AdjustCapsuleSize()
-{
-	UCapsuleComponent* Capsule = GetCapsuleComponent();
-	if (!Capsule) return;
-
-	// 크라우치 상태일 때는 언리얼 내장 Crouch()가 캡슐을 자동 관리하므로
-	// 여기서 건드리지 않습니다.
-	if (bIsCrouching) return;
-
-	if (MovementState == EMovementState::Sprinting)
-	{
-		Capsule->SetCapsuleSize(SprintCapsuleRadius, SprintCapsuleHalfHeight, true);
-	}
-	else
-	{
-		Capsule->SetCapsuleSize(DefaultCapsuleRadius, DefaultCapsuleHalfHeight, true);
-	}
-}
-
-void ASpartaSurvivalCharacter::Landed(const FHitResult& Hit)
-{
-	Super::Landed(Hit);
-
-	// 착지 직후 즉시 상태를 갱신합니다 (다음 Tick 전에 올바른 상태를 보장).
-	bIsInAir = false;
-	UpdateMovementState();
 }
