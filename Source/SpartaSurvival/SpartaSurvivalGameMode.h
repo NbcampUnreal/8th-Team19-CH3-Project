@@ -28,12 +28,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "GameSystem")
 	void AddScore(int32 Amount);
 
-	//	몬스터 관련
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawning")
-	TSubclassOf<AActor> EnemyClass;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Spawning")
+	class UEnemySpawnComponent* EnemySpawnComp;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawning")
-	FVector SpawnLocation;
+	UPROPERTY()
+	TArray<AActor*> SpawnPoints;
 
 
 	/*// 보스가 등장할 특정 위치

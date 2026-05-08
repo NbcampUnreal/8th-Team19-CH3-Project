@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -7,33 +5,31 @@
 #include "EnemyWaveData.h"
 #include "EnemySpawnComponent.generated.h"
 
-
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class SPARTASURVIVAL_API UEnemySpawnComponent : public UActorComponent
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
-public:	
-	
-	UEnemySpawnComponent();
-
-	UFUNCTION(BlueprintCallable, Category = "Spawning")
-	void StartWave(int32 WaveNumber);
-
-protected:
-
-	void SpawnLogic();
+public:
+    UEnemySpawnComponent();
 
 
-	UPROPERTY(EditAnywhere, Category = "Spawning")
-	class UDataTable* WaveDataTable;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawning")
+    class UDataTable* WaveDataTable;
+
+    
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Spawning")
+    FEnemyWaveData CurrentWaveInfo;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawning")
+    int32 RemainingMonsters;
+
+    UFUNCTION(BlueprintCallable, Category = "Spawning")
+    void StartWave(int32 WaveNumber);
+
+    void SpawnLogic(FVector SpawnCenter);
 
 private:
+    FTimerHandle SpawnTimerHandle;
 
-	FEnemyWaveData CurrentWaveInfo;
-
-	int32 RemainingMonsters;
-
-	FTimerHandle SpawnTimerHandle;
-		
 };

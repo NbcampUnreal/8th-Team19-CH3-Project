@@ -5,6 +5,8 @@
 #include "UObject/ConstructorHelpers.h"
 #include "Kismet/GameplayStatics.h" 
 #include "Kismet/KismetSystemLibrary.h"
+#include "EnemySpawnComponent.h"
+#include "Engine/TargetPoint.h"
 
 
 ASpartaSurvivalGameMode::ASpartaSurvivalGameMode()
@@ -16,6 +18,20 @@ ASpartaSurvivalGameMode::ASpartaSurvivalGameMode()
 		DefaultPawnClass = PlayerPawnBPClass.Class;
 	}*/
 	PrimaryActorTick.bCanEverTick = true;
+
+	EnemySpawnComp = CreateDefaultSubobject<UEnemySpawnComponent>(TEXT("EnemySpawnComp"));
+
+	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnBPClass(TEXT("/Script/Engine.Blueprint'/Game/ThirdPerson/Blueprints/BP_ThirdPersonCharacter.BP_ThirdPersonCharacter_C'"));
+
+	if (PlayerPawnBPClass.Class != nullptr)
+	{
+		DefaultPawnClass = PlayerPawnBPClass.Class;
+		UE_LOG(LogTemp, Warning, TEXT("성공: 메인 캐릭터 클래스를 찾았습니다!"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("실패: 메인 캐릭터 클래스를 찾지 못했습니다. 경로 확인해봐!"));
+	}
 
 	AccumulatedSeconds = 0;
 	CurrentStage = 1;
@@ -32,6 +48,37 @@ void ASpartaSurvivalGameMode::BeginPlay()
 {
 	
 	Super::BeginPlay();
+
+
+	if (EnemySpawnComp == nullptr)
+	{
+		UE_LOG(LogTemp, Error, TEXT("심각: EnemySpawnComp가 생성되지 않았습니다!"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("성공: EnemySpawnComp를 찾았습니다!"));
+		EnemySpawnComp->StartWave(1);
+	}
+
+	TArray<AActor*> FoundActors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ATargetPoint::StaticClass(), FoundActors);
+
+	for (AActor* Actor : FoundActors)
+	{
+		if (Actor && Actor->ActorHasTag(FName("ZombieSpawn")))
+		{
+			SpawnPoints.Add(Actor);
+		}
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("좀비 스폰 포인트 %d개 등록 완료!"), SpawnPoints.Num());
+
+	
+	if (EnemySpawnComp)
+	{
+		EnemySpawnComp->StartWave(CurrentStage);
+	}
+
 	UE_LOG(LogTemp, Error, TEXT("게임 시작!"));
 	//메인 메뉴 위젯
 	//ShowMainMenu();
@@ -150,14 +197,28 @@ void ASpartaSurvivalGameMode::HandleMainTimerElapsed()
 
 	AddScore(10);
 
-	UE_LOG(LogTemp, Warning, TEXT("Main timer elapsed... [Stage-%02d][%03d초]"), CurrentStage, AccumulatedSeconds);
+	if (AccumulatedSeconds % 2 == 0)
+	{
+		if (EnemySpawnComp)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("체크 - 남은 마릿수: %d, 포인트 개수: %d"),
+				EnemySpawnComp->RemainingMonsters, SpawnPoints.Num());
+		}
+		
+		if (EnemySpawnComp && EnemySpawnComp->RemainingMonsters > 0 && SpawnPoints.Num() > 0)
+		{
+			int32 RandIdx = FMath::RandRange(0, SpawnPoints.Num() - 1);
+			FVector SpawnPos = SpawnPoints[RandIdx]->GetActorLocation();
+
+			
+			EnemySpawnComp->SpawnLogic(SpawnPos);
+		}
+	}
 
 	if (AccumulatedSeconds % StageTime == 0)
 	{
 		CurrentStage += 1;
 		Gamelevel(CurrentStage);
-
-		UE_LOG(LogTemp, Warning, TEXT("Stage-%02d started!"), CurrentStage);
 	}
 }
 
