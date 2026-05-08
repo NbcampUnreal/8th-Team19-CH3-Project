@@ -8,6 +8,7 @@
 
 class UStaticMeshComponent;
 class USceneComponent;
+class AMainCharacter;
 
 UCLASS(Abstract)
 class SPARTASURVIVAL_API ADefaultGun : public AActor
@@ -18,12 +19,15 @@ public:
 	// Sets default values for this actor's properties
 	ADefaultGun();
 
+	//총기 함수
 	virtual void Fire();
 	virtual void Reload();
-	virtual void Aim();
+	virtual void Zoom(bool bIsZoom);
+	virtual void EquipToCharacter(AMainCharacter* Character);
 
-	float AimFov;
-	float AimDuration;
+	//총기 정보
+	float ZoomMultiplier;
+	float CurrentFov;
 	float ReloadDuration;
 	
 	int32 MaxAmmo;      // 최대 총알 수
@@ -31,16 +35,22 @@ public:
 
 	bool CanFire;
 
+
 protected:
+	//총기 블루프린트 컴포넌트
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gun")
 	USceneComponent* GunRoot;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gun")
-	USceneComponent* MuzzleRoot;
+	USceneComponent* MuzzlePoint;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gun")
-	USceneComponent* GripRoot;
+	USceneComponent* GripPoint;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gun")
+	USceneComponent* SupportPoint;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gun")
 	UStaticMeshComponent* GunMesh;
+
+	ADefaultGun* EquippedGun;
 
 
 };

@@ -2,6 +2,7 @@
 
 
 #include "DefaultGun.h"
+#include "MainCharacter.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
 
@@ -17,20 +18,24 @@ ADefaultGun::ADefaultGun()
 	GunMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("GunMesh"));
 	GunMesh->SetupAttachment(GunRoot);
 
-	MuzzleRoot = CreateDefaultSubobject<USceneComponent>(TEXT("MuzzleRoot"));
-	MuzzleRoot->SetupAttachment(GunMesh);
+	MuzzlePoint = CreateDefaultSubobject<USceneComponent>(TEXT("MuzzlePoint"));
+	MuzzlePoint->SetupAttachment(GunMesh);
 
-	GripRoot = CreateDefaultSubobject<USceneComponent>(TEXT("GripRoot"));
-	GripRoot->SetupAttachment(GunMesh);
+	GripPoint = CreateDefaultSubobject<USceneComponent>(TEXT("GripPoint"));
+	GripPoint->SetupAttachment(GunMesh);
 
+	SupportPoint = CreateDefaultSubobject<USceneComponent>(TEXT("SupportPoint"));
+	SupportPoint->SetupAttachment(GunMesh);
 }
-
+void ADefaultGun::EquipToCharacter(AMainCharacter* Character)
+{
+}
 void ADefaultGun::Fire()
 {
 }
 void ADefaultGun::Reload()
 {
 }
-void ADefaultGun::Aim()
+void ADefaultGun::Zoom(bool bIsZoom)
 {
 }

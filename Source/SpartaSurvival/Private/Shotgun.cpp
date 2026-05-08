@@ -1,25 +1,101 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
-
+#include "MainCharacter.h"
 #include "Shotgun.h"
+#include "DrawDebugHelpers.h"
+
 
 AShotgun::AShotgun()
 {
-	AimFov = 50.f;
-	AimDuration = 0.25f;
+	ZoomMultiplier = 2.f;
 	ReloadDuration = 1.5f;
 	MaxAmmo = 8;
 	CurrentAmmo = MaxAmmo;
 	CanFire = true;
-}	
+}
 
+//마지막으로 맞은 액터 반환
+AActor* AShotgun::GetHitActor() const 
+{
+	return LastHitActor;
+}
+
+//샷건 장착
+void AShotgun::EquipToCharacter(AMainCharacter* Character)
+{
+	if (!Character || !ShotgunBP) return;
+
+	FActorSpawnParameters SpawnParameters;
+	SpawnParameters.Owner = Character;
+	SpawnParameters.Instigator = Character;
+	SpawnParameters.SpawnCollisionHandlingOverride =
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	AShotgun* SpawnedShotgun = Character->GetWorld()->SpawnActor<AShotgun>(
+		ShotgunBP,
+		Character->GetActorLocation(),
+		Character->GetActorRotation(),
+		SpawnParameters
+	);
+
+	if (SpawnedShotgun)
+	{
+		Character->SetEquippedGun(SpawnedShotgun);
+	}
+}
+//샷건 기본 로직 구현
 void AShotgun::Fire()
 {
 	if (CanFire && CurrentAmmo > 0)
 	{
-		// 총알 발사 로직 구현
+		if (!MuzzlePoint) return;
+		
 		CurrentAmmo--;
-		UE_LOG(LogTemp, Log, TEXT("Shotgun fired! Remaining ammo: %d"), CurrentAmmo);
+
+		FVector StartPoint = MuzzlePoint->GetComponentLocation();
+		FVector StartDirection = MuzzlePoint->GetForwardVector();
+
+		FCollisionQueryParams CollisionParameters;
+		CollisionParameters.AddIgnoredActor(this); //자신은 충돌에서 제외
+		CollisionParameters.AddIgnoredActor(GetOwner()); //소유자도 충돌에서 제외
+
+
+		for (int32 i = 0; i < PelletCount; i++)
+		{
+			FVector ShotDirection = FMath::VRandCone(
+				StartDirection,
+				FMath::DegreesToRadians(SpreadAngle)
+			);
+
+			FVector EndPoint = StartPoint + ShotDirection * ShotgunRange; // 발사될 방향 계산
+
+			FHitResult HitResult;
+
+			bool bHit = GetWorld()->LineTraceSingleByChannel( // 맞으면 HitResult 안에 충돌 정보가 저장
+				HitResult,
+				StartPoint,
+				EndPoint,
+				ECC_Visibility,
+				CollisionParameters
+			);
+
+			DrawDebugLine(GetWorld(), StartPoint, EndPoint, FColor::Red, false, 1.f, 0, 2.f);
+
+			if (bHit && HitResult.GetActor())
+			{
+				LastHitActor = HitResult.GetActor(); //Hit 액터 저장
+				UE_LOG(LogTemp, Warning, TEXT("Hit: %s"), *HitResult.GetActor()->GetName()); //충돌한 액터 이름 로그
+			}
+			else
+			{
+				LastHitActor = nullptr; //충돌 없으면 null로 초기화	
+				UE_LOG(LogTemp, Warning, TEXT("Shotgun fired but hit nothing."));
+			}
+			UE_LOG(LogTemp, Log, TEXT("Shotgun fired! Remaining ammo: %d"), CurrentAmmo);
+		}
+
+
+
 	}
 	else
 	{
@@ -27,15 +103,29 @@ void AShotgun::Fire()
 	}
 }
 
+//재장전
 void AShotgun::Reload()
 {
-	// 재장전 로직 구현
+	CanFire = false;
+
+	GetWorld()->GetTimerManager().SetTimer(
+		ReloadTimerHandle,
+		this,
+		&AShotgun::EndReload,
+		ReloadDuration,
+		false
+	);
+}
+
+void AShotgun::EndReload()
+{
 	CurrentAmmo = MaxAmmo;
+	CanFire = true;
+
 	UE_LOG(LogTemp, Log, TEXT("Shotgun reloaded! Ammo reset to: %d"), CurrentAmmo);
 }
 
-void AShotgun::Aim()
+void AShotgun::Zoom(bool bIsZoom)
 {
-	// 조준 로직 구현
-	UE_LOG(LogTemp, Log, TEXT("Shotgun aiming! FOV: %f, Duration: %f"), AimFov, AimDuration);
+
 }
