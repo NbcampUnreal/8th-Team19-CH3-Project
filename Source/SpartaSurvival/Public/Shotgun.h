@@ -37,6 +37,5 @@ public:
 	virtual void Fire() override;
 	virtual void Reload() override;
 	virtual void Zoom(bool bIsZoom) override;
-	virtual void EquipToCharacter(AMainCharacter* Character) override;
 	
 };
