@@ -14,6 +14,8 @@ AEnemyBase::AEnemyBase()
     CurrentHP = MaxHP;
 
     GetCharacterMovement()->bOrientRotationToMovement = true;
+    GetCharacterMovement()->bUseControllerDesiredRotation = true;
+    GetCharacterMovement()->RotationRate = FRotator(0.f, 360.f, 0.f);
     bUseControllerRotationYaw = false;
 }
 
@@ -148,8 +150,40 @@ void AEnemyBase::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
     bIsAttacking = false;
 
     AEnemyAIController* AIC = Cast<AEnemyAIController>(GetController());
-    if (AIC)
+    ACharacter* PlayerChar = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
+
+    if (AIC && PlayerChar)
     {
+       
+        FVector Dir = PlayerChar->GetActorLocation() - GetActorLocation();
+        Dir.Z = 0.f;
+        FRotator TargetRot = Dir.Rotation();
+
+        
+        struct FRotationHelper
+        {
+            int32 Steps = 0;
+            FTimerHandle TimerHandle;
+        };
+
+       
+        TSharedPtr<FRotationHelper> Helper = MakeShareable(new FRotationHelper());
+
+        GetWorldTimerManager().SetTimer(Helper->TimerHandle, [this, TargetRot, Helper]() {
+            if (Helper->Steps >= 100)
+            {
+                GetWorldTimerManager().ClearTimer(Helper->TimerHandle);
+                return;
+            }
+
+            
+            FRotator NewRot = FMath::RInterpTo(GetActorRotation(), TargetRot, 0.01f, 7.f);
+            SetActorRotation(NewRot);
+
+            Helper->Steps++;
+            }, 0.01f, true);
+
+       
         AIC->ChasePlayer();
     }
 }

@@ -29,12 +29,10 @@ void AEnemyAIController::ChasePlayer()
     }
 
     float Distance = Enemy->GetDistanceTo(PlayerChar);
-    FVector Forward = Enemy->GetActorForwardVector();
-    FVector DirToPlayer = (PlayerChar->GetActorLocation() - Enemy->GetActorLocation()).GetSafeNormal();
-    float DotValue = FVector::DotProduct(Forward, DirToPlayer);
+    
 
     
-    if (Distance <= 130.f && DotValue > 0.3f)
+    if (Distance <= 130.f)
     {
         StopMovement();
         HandleAttack(Enemy);
@@ -42,7 +40,11 @@ void AEnemyAIController::ChasePlayer()
     
     else
     {
-        MoveToActor(PlayerChar, 40.f);
+        FAIMoveRequest MoveRequest(PlayerChar);
+        MoveRequest.SetAcceptanceRadius(10.f); 
+        MoveRequest.SetCanStrafe(true);     
+
+        MoveTo(MoveRequest);
     }
 }
 
