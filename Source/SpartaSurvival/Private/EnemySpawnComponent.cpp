@@ -44,7 +44,7 @@ void UEnemySpawnComponent::StartWave(int32 WaveNumber)
     {
         CurrentWaveInfo = *WaveData;
         RemainingMonsters = CurrentWaveInfo.TotalMonsterCount;
-        UE_LOG(LogTemp, Warning, TEXT("★★★ 데이터 로드 성공! 마릿수: %d ★★★"), RemainingMonsters);
+        UE_LOG(LogTemp, Warning, TEXT(" 데이터 로드 성공! 마릿수: %d "), RemainingMonsters);
     }
     else
     {
@@ -86,14 +86,29 @@ void UEnemySpawnComponent::SpawnLogic(FVector SpawnCenter)
     {
         if (CurrentWaveInfo.EnemyClass)
         {
-            
+            FRotator SpawnRotation = FRotator::ZeroRotator;
+
+            APawn* PlayerPawn = GetWorld()->GetFirstPlayerController()->GetPawn();
+
+            if (PlayerPawn)
+            {
+                
+                FVector LookAtDir = PlayerPawn->GetActorLocation() - RandomLocation.Location;
+                
+                SpawnRotation = LookAtDir.Rotation();
+                
+                SpawnRotation.Pitch = 0.f;
+                SpawnRotation.Roll = 0.f;
+            }
+
             FActorSpawnParameters SpawnParams;
             SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
 
             AActor* SpawnedActor = World->SpawnActor<AEnemyBase>(
                 CurrentWaveInfo.EnemyClass,
                 RandomLocation.Location,
-                FRotator::ZeroRotator,
+                SpawnRotation,
                 SpawnParams
             );
 
