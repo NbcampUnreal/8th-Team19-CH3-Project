@@ -13,15 +13,6 @@ AShotgun::AShotgun()
 	CurrentAmmo = MaxAmmo;
 	CanFire = true;
 
-	//샷건 bp 클래스 로드
-	static ConstructorHelpers::FClassFinder<AShotgun> ShotgunBPClass(
-		TEXT("/Game/Blueprints/BP_Shotgun")
-	);
-
-	if (ShotgunBPClass.Succeeded())
-	{
-		ShotgunBP = ShotgunBPClass.Class;
-	}
 }
 
 //마지막으로 맞은 액터 반환
@@ -30,17 +21,6 @@ AActor* AShotgun::GetHitActor() const
 	return LastHitActor;
 }
 
-//샷건 장착
-void AShotgun::EquipToCharacter(AMainCharacter* Character)
-{
-	if (!Character || !ShotgunBP) return;
-
-	AShotgun* SpawnedShotgun = GetWorld()->SpawnActor<AShotgun>(
-		ShotgunBP,
-		GetActorLocation(),
-		GetActorRotation()
-	);
-}
 //샷건 기본 로직 구현
 void AShotgun::Fire()
 {

@@ -28,8 +28,6 @@ private:
 protected:
 	AMainCharacter* CurrentCharacter;
 
-	UPROPERTY(EditAnywhere, Category = "Shotgun")
-	TSubclassOf<AShotgun> ShotgunBP;
 
 public:
 	AShotgun();
