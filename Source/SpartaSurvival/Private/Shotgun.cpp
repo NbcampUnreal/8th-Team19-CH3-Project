@@ -2,6 +2,7 @@
 #include "Shotgun.h"
 #include "MainCharacter.h"
 #include "DrawDebugHelpers.h"
+#include "UObject/ConstructorHelpers.h"
 
 
 AShotgun::AShotgun()
@@ -11,6 +12,16 @@ AShotgun::AShotgun()
 	MaxAmmo = 8;
 	CurrentAmmo = MaxAmmo;
 	CanFire = true;
+
+	//샷건 bp 클래스 로드
+	static ConstructorHelpers::FClassFinder<AShotgun> ShotgunBPClass(
+		TEXT("/Game/Blueprints/BP_Shotgun")
+	);
+
+	if (ShotgunBPClass.Succeeded())
+	{
+		ShotgunBP = ShotgunBPClass.Class;
+	}
 }
 
 //마지막으로 맞은 액터 반환
@@ -24,23 +35,11 @@ void AShotgun::EquipToCharacter(AMainCharacter* Character)
 {
 	if (!Character || !ShotgunBP) return;
 
-	FActorSpawnParameters SpawnParameters;
-	SpawnParameters.Owner = Character;
-	SpawnParameters.Instigator = Character;
-	SpawnParameters.SpawnCollisionHandlingOverride =
-		ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-	AShotgun* SpawnedShotgun = Character->GetWorld()->SpawnActor<AShotgun>(
+	AShotgun* SpawnedShotgun = GetWorld()->SpawnActor<AShotgun>(
 		ShotgunBP,
-		Character->GetActorLocation(),
-		Character->GetActorRotation(),
-		SpawnParameters
+		GetActorLocation(),
+		GetActorRotation()
 	);
-
-	if (SpawnedShotgun)
-	{
-		Character->SetEquippedGun(SpawnedShotgun);
-	}
 }
 //샷건 기본 로직 구현
 void AShotgun::Fire()
