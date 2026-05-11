@@ -1,8 +1,0 @@
-2026/05/06-17:18:27.363 7da8 Creating DB C:/GitStudy/8th-Team19-CH3-Project - Mine/Saved/webcache_4430\Local Storage\leveldb since it was missing.
-2026/05/06-17:18:27.366 7da8 Reusing MANIFEST C:/GitStudy/8th-Team19-CH3-Project - Mine/Saved/webcache_4430\Local Storage\leveldb/MANIFEST-000001
-2026/05/06-17:22:47.212 6c98 Level-0 table #5: started
-2026/05/06-17:22:47.215 6c98 Level-0 table #5: 172199 bytes OK
-2026/05/06-17:22:47.216 6c98 Delete type=0 #3
-2026/05/06-17:22:50.365 6c98 Level-0 table #7: started
-2026/05/06-17:22:50.370 6c98 Level-0 table #7: 350531 bytes OK
-2026/05/06-17:22:50.371 6c98 Delete type=0 #4
