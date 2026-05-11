@@ -33,9 +33,10 @@ public:
 	AShotgun();
 
 	AActor* GetHitActor() const;
+	USceneComponent* GetGripPoint() const;
 
 	virtual void Fire() override;
 	virtual void Reload() override;
 	virtual void Zoom(bool bIsZoom) override;
-	
+	virtual void EquipToCharacter(AMainCharacter* Character) override;
 };

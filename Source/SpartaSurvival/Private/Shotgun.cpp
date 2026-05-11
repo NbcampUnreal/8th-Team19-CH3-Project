@@ -21,6 +21,24 @@ AActor* AShotgun::GetHitActor() const
 	return LastHitActor;
 }
 
+USceneComponent* AShotgun::GetGripPoint() const
+{
+	return GripPoint;
+}
+
+void AShotgun::EquipToCharacter(AMainCharacter* Character)
+{
+	if (Character)
+	{
+		CurrentCharacter = Character;
+		Character->SetEquippedGun(this);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Invalid character reference. Cannot equip shotgun."));
+	}
+}
+
 //샷건 기본 로직 구현
 void AShotgun::Fire()
 {

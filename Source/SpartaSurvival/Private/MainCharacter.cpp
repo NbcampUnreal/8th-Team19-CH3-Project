@@ -20,11 +20,45 @@ AMainCharacter::AMainCharacter()
 
 }
 
+
 // Called when the game starts or when spawned
 void AMainCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	if (!ShotgunBP) return;
+
+	FActorSpawnParameters Params;
+	Params.Owner = this;
+	Params.Instigator = this;
+
+	AShotgun* SpawnedShotgun = GetWorld()->SpawnActor<AShotgun>
+	(
+		ShotgunBP,
+		FVector::ZeroVector,
+		FRotator::ZeroRotator,
+		Params
+	);
+
+	SetEquippedGun(SpawnedShotgun);
+
+	if (SpawnedShotgun)
+	{
+		SpawnedShotgun->AttachToComponent(
+			GetMesh(),
+			FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+			TEXT("WeaponSocket")
+		);
+
+		if (SpawnedShotgun->GetGripPoint())
+		{
+			FTransform GripOffset =
+				SpawnedShotgun->GetGripPoint()->GetRelativeTransform();
+			SpawnedShotgun->SetActorRelativeTransform(GripOffset.Inverse());
+		}
+
+	}
+
 }
 
 // Called every frame
