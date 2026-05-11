@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "EnemyWaveData.h"
+#include "EnemyBase.h"
 #include "EnemySpawnComponent.generated.h"
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
@@ -31,5 +32,7 @@ public:
 
 private:
     FTimerHandle SpawnTimerHandle;
+    TArray<TSubclassOf<AEnemyBase>> WaveSpawnQueue;
+    FVector LastSpawnCenter;
 
 };
