@@ -7,20 +7,41 @@
 		{
 			"Name": "SpartaSurvival",
 			"Type": "Runtime",
-			"LoadingPhase": "Default",
-			"AdditionalDependencies": [
-				"Engine",
-				"AIModule"
-			]
+			"LoadingPhase": "Default"
 		}
 	],
 	"Plugins": [
 		{
 			"Name": "ModelingToolsEditorMode",
-			"Enabled": true,
-			"TargetAllowList": [
-				"Editor"
-			]
+			"Enabled": false
+		},
+		{
+			"Name": "ConcertMain",
+			"Enabled": false
+		},
+		{
+			"Name": "ConcertSyncCore",
+			"Enabled": false
+		},
+		{
+			"Name": "ConcertSyncClient",
+			"Enabled": false
+		},
+		{
+			"Name": "ConcertSyncServer",
+			"Enabled": false
+		},
+		{
+			"Name": "MultiUserClient",
+			"Enabled": false
+		},
+		{
+			"Name": "UdpMessaging",
+			"Enabled": false
+		},
+		{
+			"Name": "TcpMessaging",
+			"Enabled": false
 		},
 		{
 			"Name": "AnimationLocomotionLibrary",

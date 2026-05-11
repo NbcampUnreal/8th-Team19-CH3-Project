@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -6,18 +6,35 @@
 #include "GameFramework/Character.h"
 #include "MainCharacter.generated.h"
 
+struct FInputActionValue;
+class ADefaultGun;
+class AShotgun;
+
 UCLASS()
 class SPARTASURVIVAL_API AMainCharacter : public ACharacter
 {
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this character's properties
 	AMainCharacter();
 
+	void SetEquippedGun(ADefaultGun* NewGun);
+
 protected:
-	// Called when the game starts or when spawned
+
 	virtual void BeginPlay() override;
+
+
+	//현재 장착된 총기 정보
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")
+	ADefaultGun* EquippedGun = nullptr;
+
+
+	// 총기 액션 함수들 
+	void Fire();
+	void Reload();
+	void StartZoom();
+	void EndZoom();
 
 public:	
 	// Called every frame
