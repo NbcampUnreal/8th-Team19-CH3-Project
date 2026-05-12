@@ -13,6 +13,11 @@ class UInputMappingContext;
 class UInputAction;
 struct FInputActionValue;
 
+//총기관련 클래스 전방선언
+class USceneComponent;
+class ADefaultGun;
+class AShotgun;
+
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
 /**
@@ -207,4 +212,49 @@ public:
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 	FORCEINLINE EMovementState GetMovementState() const { return MovementState; }
+
+
+
+//총기 관련 프로퍼티와 함수들
+
+public:
+	void SetEquippedGun(ADefaultGun* NewGun);
+
+	USceneComponent* GetWeaponSocket() const { return WeaponSocket; }
+	USceneComponent* GetSupportSocket() const { return SupportSocket; }
+
+	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "Gun")
+	AShotgun* StartingShotgun = nullptr;
+
+
+protected:
+	//샷건 bp 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gun")
+	TSubclassOf<AShotgun> ShotgunBP;
+
+	//현재 장착된 총기 정보
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")
+	ADefaultGun* EquippedGun = nullptr;
+
+	//component
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")
+	USceneComponent* WeaponSocket = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")
+	USceneComponent* SupportSocket = nullptr;
+
+
+	// 총기 액션 함수들 
+	void Fire();
+	void Reload();
+	void StartZoom();
+	void EndZoom();
+
+private:
+	bool bWeaponMovePose = false;
+
+	FRotator WeaponBaseRot = FRotator(-5.f, 170.f, 0.f);
+	FRotator WeaponMoveOffsetRot = FRotator(15.f, -22.f, 0.f);
+	FRotator WeaponJumpOffsetRot = FRotator(15.f, -22.f, 0.f); 
+
+	float WeaponRotInterpSpeed = 10.f;
 };

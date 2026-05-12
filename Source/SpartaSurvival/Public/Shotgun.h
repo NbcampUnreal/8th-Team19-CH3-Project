@@ -7,7 +7,7 @@
 #include "Shotgun.generated.h"
 
 
-class AMainCharacter;
+class ASpartaSurvivalCharacter;
 class TimerManager;
 
 UCLASS()
@@ -26,17 +26,18 @@ private:
 	float DamagePerPellet = 10.f;
 	
 protected:
-	AMainCharacter* CurrentCharacter;
+	ASpartaSurvivalCharacter* CurrentCharacter;
 
 
 public:
 	AShotgun();
 
 	AActor* GetHitActor() const;
-	USceneComponent* GetGripPoint() const;
+	USceneComponent* GetGripPoint() const { return GripPoint; }
+	UStaticMeshComponent* GetGunMesh() const { return GunMesh; }
 
 	virtual void Fire() override;
 	virtual void Reload() override;
 	virtual void Zoom(bool bIsZoom) override;
-	virtual void EquipToCharacter(AMainCharacter* Character) override;
+	virtual void EquipToCharacter(ASpartaSurvivalCharacter* Character) override;
 };

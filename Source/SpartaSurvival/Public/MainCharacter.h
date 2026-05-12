@@ -24,9 +24,6 @@ protected:
 
 	virtual void BeginPlay() override;
 
-	//샷건 bp 
-	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
-	TSubclassOf<AShotgun> ShotgunBP;
 
 	//현재 장착된 총기 정보
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")

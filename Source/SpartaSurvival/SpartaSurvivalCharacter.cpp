@@ -11,6 +11,14 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 
+//총기 사용 해더
+#include "Components/SceneComponent.h"
+#include "GunController.h"
+#include "DefaultGun.h"
+#include "Shotgun.h"
+#include "UObject/ConstructorHelpers.h"
+
+
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
 //////////////////////////////////////////////////////////////////////////
@@ -21,6 +29,17 @@ ASpartaSurvivalCharacter::ASpartaSurvivalCharacter()
 	// Tick 활성화 (매 프레임 상태 갱신에 필요)
 	PrimaryActorTick.bCanEverTick = true;
 
+	//총기 잡는 그립 소캣생성
+	WeaponSocket = CreateDefaultSubobject<USceneComponent>(TEXT("GripPoint"));
+	WeaponSocket->SetupAttachment(GetMesh(), TEXT("hand_r"));
+	WeaponSocket->SetRelativeLocation(FVector::ZeroVector);
+	WeaponSocket->SetRelativeRotation(WeaponBaseRot);
+
+	SupportSocket = CreateDefaultSubobject<USceneComponent>(TEXT("SupportPoint"));
+	SupportSocket->SetupAttachment(GetMesh(), TEXT("hand_l"));
+	SupportSocket->SetRelativeLocation(FVector::ZeroVector);
+	SupportSocket->SetRelativeRotation(FRotator::ZeroRotator);
+
 	// ─── 콜리전 캡슐 ───────────────────────────────────────────────
 	GetCapsuleComponent()->InitCapsuleSize(DefaultCapsuleRadius, DefaultCapsuleHalfHeight);
 
@@ -28,31 +47,41 @@ ASpartaSurvivalCharacter::ASpartaSurvivalCharacter()
 	// 컨트롤러 회전을 캐릭터 회전에 직접 반영하지 않습니다.
 	// 카메라 붐만 컨트롤러를 따라 회전하고, 캐릭터는 이동 방향을 향합니다.
 	bUseControllerRotationPitch = false;
-	bUseControllerRotationYaw   = false;
-	bUseControllerRotationRoll  = false;
+	bUseControllerRotationYaw = false;
+	bUseControllerRotationRoll = false;
 
 	// ─── 이동 컴포넌트 설정 ────────────────────────────────────────
 	UCharacterMovementComponent* MovComp = GetCharacterMovement();
 	MovComp->bOrientRotationToMovement = true;           // 이동 방향으로 캐릭터 회전
-	MovComp->RotationRate               = FRotator(0.f, 500.f, 0.f);
-	MovComp->JumpZVelocity              = 700.f;
-	MovComp->AirControl                 = 0.35f;
-	MovComp->MaxWalkSpeed               = WalkSpeed;     // 걷기 속도로 초기화
-	MovComp->MinAnalogWalkSpeed         = 20.f;
+	MovComp->RotationRate = FRotator(0.f, 500.f, 0.f);
+	MovComp->JumpZVelocity = 700.f;
+	MovComp->AirControl = 0.35f;
+	MovComp->MaxWalkSpeed = WalkSpeed;     // 걷기 속도로 초기화
+	MovComp->MinAnalogWalkSpeed = 20.f;
 	MovComp->BrakingDecelerationWalking = 2000.f;
 	MovComp->BrakingDecelerationFalling = 1500.f;
-	MovComp->NavAgentProps.bCanCrouch   = true;  // 언리얼 내장 크라우치 활성화
+	MovComp->NavAgentProps.bCanCrouch = true;  // 언리얼 내장 크라우치 활성화
 
 	// ─── 카메라 붐 ─────────────────────────────────────────────────
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
-	CameraBoom->TargetArmLength      = 400.f;
+	CameraBoom->TargetArmLength = 400.f;
 	CameraBoom->bUsePawnControlRotation = true; // 컨트롤러(마우스)에 따라 붐 회전
 
 	// ─── 팔로우 카메라 ─────────────────────────────────────────────
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false; // 붐 기준으로 고정, 별도 회전 없음
+
+	//총기 관련 // shotgunbp 알려주기 
+	static ConstructorHelpers::FClassFinder<AShotgun> ShotgunClass(
+		TEXT("/Game/Blueprints/BP_Shotgun")
+	);
+
+	if (ShotgunClass.Succeeded())
+	{
+		ShotgunBP = ShotgunClass.Class;
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -65,6 +94,27 @@ void ASpartaSurvivalCharacter::BeginPlay()
 	// 초기 캡슐 크기 및 이동 속도 적용
 	AdjustCapsuleSize();
 	ApplyMovementSpeed();
+
+	if (!ShotgunBP)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ShotgunBP is null."));
+		return;
+	}
+
+	FActorSpawnParameters Params;
+	Params.Owner = this;
+	Params.Instigator = this;
+
+	AShotgun* SpawnedShotgun = GetWorld()->SpawnActor<AShotgun>(
+		ShotgunBP,
+		GetActorLocation(),
+		GetActorRotation(),
+		Params
+	);
+
+	SpawnedShotgun->EquipToCharacter(this);
+
+
 }
 
 void ASpartaSurvivalCharacter::Tick(float DeltaTime)
@@ -80,6 +130,23 @@ void ASpartaSurvivalCharacter::Tick(float DeltaTime)
 	FVector CurrentOffset = CameraBoom->GetRelativeLocation();
 	float SmoothedZ = FMath::FInterpTo(CurrentOffset.Z, TargetCameraZ, DeltaTime, CrouchCameraInterpSpeed);
 	CameraBoom->SetRelativeLocation(FVector(CurrentOffset.X, CurrentOffset.Y, SmoothedZ));
+
+	if (WeaponSocket)
+	{
+		FRotator TargetRot = WeaponBaseRot; 
+		if (bIsInAir) { TargetRot = WeaponJumpOffsetRot + WeaponBaseRot; }
+		else if (bWeaponMovePose) { TargetRot = WeaponMoveOffsetRot + WeaponBaseRot; }
+		else TargetRot = WeaponBaseRot;
+
+		WeaponSocket->SetRelativeRotation(
+			FMath::RInterpTo(
+				WeaponSocket->GetRelativeRotation(),
+				TargetRot,
+				DeltaTime,
+				WeaponRotInterpSpeed
+			)
+		);
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -143,6 +210,25 @@ void ASpartaSurvivalCharacter::SetupPlayerInputComponent(UInputComponent* Player
 				     "에디터에서 CrouchAction Input Action 에셋을 할당해 주세요."),
 				*GetNameSafe(this));
 		}
+
+		//총기 액션
+		if (AGunController* GunController = Cast<AGunController>(GetController()))
+		{
+			if (GunController->FireAction)
+			{
+				EIC->BindAction(GunController->FireAction, ETriggerEvent::Triggered, this, &ASpartaSurvivalCharacter::Fire);
+			}
+			if (GunController->ReloadAction)
+			{
+				EIC->BindAction(GunController->ReloadAction, ETriggerEvent::Triggered, this, &ASpartaSurvivalCharacter::Reload);
+			}
+			if (GunController->ZoomAction)
+			{
+				EIC->BindAction(GunController->ZoomAction, ETriggerEvent::Triggered, this, &ASpartaSurvivalCharacter::StartZoom);
+				EIC->BindAction(GunController->ZoomAction, ETriggerEvent::Completed, this, &ASpartaSurvivalCharacter::EndZoom);
+			}
+
+		}
 	}
 	else
 	{
@@ -156,6 +242,8 @@ void ASpartaSurvivalCharacter::SetupPlayerInputComponent(UInputComponent* Player
 
 void ASpartaSurvivalCharacter::Move(const FInputActionValue& Value)
 {
+	bWeaponMovePose = true;
+
 	FVector2D MovementVector = Value.Get<FVector2D>();
 	bHasMovementInput = !MovementVector.IsNearlyZero();
 
@@ -186,6 +274,7 @@ void ASpartaSurvivalCharacter::Look(const FInputActionValue& Value)
 
 void ASpartaSurvivalCharacter::StopMove()
 {
+	bWeaponMovePose = false;
 	bHasMovementInput = false;
 	bIsMovingForward  = false;
 }
@@ -299,9 +388,43 @@ void ASpartaSurvivalCharacter::AdjustCapsuleSize()
 
 void ASpartaSurvivalCharacter::Landed(const FHitResult& Hit)
 {
-	Super::Landed(Hit);
-
 	// 착지 직후 즉시 상태를 갱신합니다 (다음 Tick 전에 올바른 상태를 보장).
 	bIsInAir = false;
 	UpdateMovementState();
 }
+
+//총기 액션 함수들 ───────────────────────────────────────
+
+void ASpartaSurvivalCharacter::SetEquippedGun(ADefaultGun* ToBeEquippedGun)
+{
+	EquippedGun = ToBeEquippedGun;
+}
+void ASpartaSurvivalCharacter::Fire()
+{
+	if (EquippedGun)
+	{
+		EquippedGun->Fire();
+	}
+}
+void ASpartaSurvivalCharacter::Reload()
+{
+	if (EquippedGun)
+	{
+		EquippedGun->Reload();
+	}
+}
+void ASpartaSurvivalCharacter::StartZoom()
+{
+	if (EquippedGun)
+	{
+		EquippedGun->Zoom(true);
+	}
+}
+void ASpartaSurvivalCharacter::EndZoom()
+{
+	if (EquippedGun)
+	{
+		EquippedGun->Zoom(false);
+	}
+}
+

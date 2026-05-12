@@ -1,8 +1,7 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 #include "Shotgun.h"
-#include "MainCharacter.h"
+#include "../SpartaSurvivalCharacter.h"
 #include "DrawDebugHelpers.h"
-#include "UObject/ConstructorHelpers.h"
 
 
 AShotgun::AShotgun()
@@ -13,6 +12,24 @@ AShotgun::AShotgun()
 	CurrentAmmo = MaxAmmo;
 	CanFire = true;
 
+
+	//mesh 적용하기 
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshAsset(
+		TEXT("/Game/GunMeshes/ShotgunPrototype.ShotgunPrototype")
+	);
+
+	if (MeshAsset.Succeeded())
+	{
+		GunMesh->SetStaticMesh(MeshAsset.Object);
+	}
+
+	GunMesh->SetRelativeScale3D(FVector(.37f, .37f, .37f));
+	GunMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GunMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
+	GunMesh->SetGenerateOverlapEvents(false);
+
+
+
 }
 
 //마지막으로 맞은 액터 반환
@@ -21,22 +38,33 @@ AActor* AShotgun::GetHitActor() const
 	return LastHitActor;
 }
 
-USceneComponent* AShotgun::GetGripPoint() const
+//캐릭터에게 장착
+void AShotgun::EquipToCharacter(ASpartaSurvivalCharacter* Character)
 {
-	return GripPoint;
-}
+	if (!Character || !Character->GetWeaponSocket() || !Character->GetSupportSocket() || !GripPoint || !SupportPoint || !GetRootComponent()) return;
 
-void AShotgun::EquipToCharacter(AMainCharacter* Character)
-{
-	if (Character)
-	{
-		CurrentCharacter = Character;
-		Character->SetEquippedGun(this);
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Invalid character reference. Cannot equip shotgun."));
-	}
+	CurrentCharacter = Character;
+	Character->SetEquippedGun(this);
+
+	// 먼저 샷건 Actor를 WeaponSocket에 붙임
+	AttachToComponent(
+		Character->GetWeaponSocket(),
+		FAttachmentTransformRules::SnapToTargetNotIncludingScale
+	);
+
+	// GripPoint 위치와 WeaponSocket 위치 차이 계산
+	FVector Delta =
+		Character->GetWeaponSocket()->GetComponentLocation()
+		- GripPoint->GetComponentLocation();
+
+	// 샷건 Actor 전체를 이동해서 GripPoint를 WeaponSocket 위치에 맞춤
+	AddActorWorldOffset(Delta);
+
+	//support point를 SupportSocket에 붙임
+	GetSupportPoint()->AttachToComponent(
+		Character->GetSupportSocket(),
+		FAttachmentTransformRules::SnapToTargetNotIncludingScale
+	);
 }
 
 //샷건 기본 로직 구현
