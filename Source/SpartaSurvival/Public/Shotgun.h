@@ -2,10 +2,10 @@
 
 #pragma once
 
+#include "Components/BillboardComponent.h"
 #include "CoreMinimal.h"
 #include "DefaultGun.h"
 #include "Shotgun.generated.h"
-
 
 class ASpartaSurvivalCharacter;
 class TimerManager;
@@ -28,6 +28,15 @@ private:
 protected:
 	ASpartaSurvivalCharacter* CurrentCharacter;
 
+	// muzzleflash
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "VFX")
+	UBillboardComponent* MuzzleFlash;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VFX")
+	TArray<UTexture2D*> MuzzleFlashTextures;
+
+	FTimerHandle MuzzleFlashTimer;
+	int32 MuzzleFlashIndex = 0;
 public:
 	AShotgun();
 

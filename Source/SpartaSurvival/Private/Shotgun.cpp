@@ -30,6 +30,29 @@ AShotgun::AShotgun()
 	GunMesh->SetGenerateOverlapEvents(false);
 
 	MuzzlePoint->SetRelativeLocation(FVector(0.f, 90.f, 0.f));
+
+	//muzzleflash
+	MuzzleFlash = CreateDefaultSubobject<UBillboardComponent>(TEXT("MuzzleFlash"));
+	MuzzleFlash->SetupAttachment(MuzzlePoint);
+	MuzzleFlash->SetRelativeLocation(FVector::ZeroVector);
+	MuzzleFlash->SetRelativeRotation(FRotator::ZeroRotator);
+	MuzzleFlash->SetHiddenInGame(false);
+	MuzzleFlash->SetRelativeScale3D(FVector(3.f));
+	MuzzleFlash->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));
+
+	static ConstructorHelpers::FObjectFinder<UTexture2D> Flash01(
+		TEXT("/Game/GunMeshes/MF1.MF1")
+	);
+	static ConstructorHelpers::FObjectFinder<UTexture2D> Flash02(
+		TEXT("/Game/GunMeshes/MF2.MF2")
+	);
+	static ConstructorHelpers::FObjectFinder<UTexture2D> Flash03(
+		TEXT("/Game/GunMeshes/MF3.MF3")
+	);
+
+	if (Flash01.Succeeded()) MuzzleFlashTextures.Add(Flash01.Object);
+	if (Flash02.Succeeded()) MuzzleFlashTextures.Add(Flash02.Object);
+	if (Flash03.Succeeded()) MuzzleFlashTextures.Add(Flash03.Object);
 }
 
 //마지막으로 맞은 액터 반환
@@ -121,6 +144,28 @@ void AShotgun::Fire()
 			UE_LOG(LogTemp, Log, TEXT("Shotgun fired! Remaining ammo: %d"), CurrentAmmo);
 		}
 
+		//muzzle flash
+		if (MuzzleFlash && MuzzleFlashTextures.Num() > 0)
+		{
+			MuzzleFlash->SetSprite(MuzzleFlashTextures[MuzzleFlashIndex]);
+
+			MuzzleFlashIndex = (MuzzleFlashIndex + 1) % MuzzleFlashTextures.Num();
+
+			MuzzleFlash->SetHiddenInGame(false);
+
+			GetWorld()->GetTimerManager().SetTimer(
+				MuzzleFlashTimer,
+				[this]()
+				{
+					if (MuzzleFlash)
+					{
+						MuzzleFlash->SetHiddenInGame(true);
+					}
+				},
+				0.05f,
+				false
+			);
+		}
 
 
 	}
