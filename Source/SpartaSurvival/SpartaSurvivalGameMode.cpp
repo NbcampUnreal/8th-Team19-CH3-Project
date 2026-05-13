@@ -21,17 +21,6 @@ ASpartaSurvivalGameMode::ASpartaSurvivalGameMode()
 
 	EnemySpawnComp = CreateDefaultSubobject<UEnemySpawnComponent>(TEXT("EnemySpawnComp"));
 
-	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnBPClass(TEXT("/Script/Engine.Blueprint'/Game/ThirdPerson/Blueprints/BP_ThirdPersonCharacter.BP_ThirdPersonCharacter_C'"));
-
-	if (PlayerPawnBPClass.Class != nullptr)
-	{
-		DefaultPawnClass = PlayerPawnBPClass.Class;
-		UE_LOG(LogTemp, Warning, TEXT("성공: 메인 캐릭터 클래스를 찾았습니다!"));
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("실패: 메인 캐릭터 클래스를 찾지 못했습니다. 경로 확인해봐!"));
-	}
 
 	AccumulatedSeconds = 0;
 	CurrentStage = 1;
