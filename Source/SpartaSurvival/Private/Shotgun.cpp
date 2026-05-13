@@ -95,6 +95,7 @@ void AShotgun::EquipToCharacter(ASpartaSurvivalCharacter* Character)
 //샷건 기본 로직 구현
 void AShotgun::Fire()
 {
+	UE_LOG(LogTemp, Warning, TEXT("Firning"));
 	if (CanFire && CurrentAmmo > 0)
 	{
 		if (!MuzzlePoint) return;
