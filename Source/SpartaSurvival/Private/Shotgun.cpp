@@ -2,11 +2,12 @@
 #include "Shotgun.h"
 #include "../SpartaSurvivalCharacter.h"
 #include "DrawDebugHelpers.h"
+#include "Camera/CameraComponent.h"
 
 
 AShotgun::AShotgun()
 {
-	ZoomMultiplier = 2.f;
+	ZoomMultiplier = 1.2f;
 	ReloadDuration = 1.5f;
 	MaxAmmo = 8;
 	CurrentAmmo = MaxAmmo;
@@ -23,13 +24,12 @@ AShotgun::AShotgun()
 		GunMesh->SetStaticMesh(MeshAsset.Object);
 	}
 
-	GunMesh->SetRelativeScale3D(FVector(.37f, .37f, .37f));
+	GunMesh->SetRelativeScale3D(FVector(.38f, .38f, .38f));
 	GunMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	GunMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
 	GunMesh->SetGenerateOverlapEvents(false);
 
-
-
+	MuzzlePoint->SetRelativeLocation(FVector(0.f, 90.f, 0.f));
 }
 
 //마지막으로 맞은 액터 반환
@@ -76,8 +76,11 @@ void AShotgun::Fire()
 		
 		CurrentAmmo--;
 
-		FVector StartPoint = MuzzlePoint->GetComponentLocation();
-		FVector StartDirection = MuzzlePoint->GetForwardVector();
+		UCameraComponent* CurrentCam = CurrentCharacter->GetFollowCamera(); 
+		if (!CurrentCam) return;
+
+		FVector StartPoint = CurrentCam->GetComponentLocation();
+		FVector StartDirection = CurrentCam->GetForwardVector();
 
 		FCollisionQueryParams CollisionParameters;
 		CollisionParameters.AddIgnoredActor(this); //자신은 충돌에서 제외
@@ -103,7 +106,7 @@ void AShotgun::Fire()
 				CollisionParameters
 			);
 
-			DrawDebugLine(GetWorld(), StartPoint, EndPoint, FColor::Red, false, 1.f, 0, 2.f);
+			DrawDebugLine(GetWorld(), MuzzlePoint->GetComponentLocation(), EndPoint, FColor::Red, false, 1.f, 0, 2.f);
 
 			if (bHit && HitResult.GetActor())
 			{
@@ -130,8 +133,9 @@ void AShotgun::Fire()
 //재장전
 void AShotgun::Reload()
 {
+	if (!CanFire || CurrentAmmo == MaxAmmo) return;
 	CanFire = false;
-
+	UE_LOG(LogTemp, Warning, TEXT("Realoading!!! %d"), CurrentAmmo);
 	GetWorld()->GetTimerManager().SetTimer(
 		ReloadTimerHandle,
 		this,
@@ -146,10 +150,25 @@ void AShotgun::EndReload()
 	CurrentAmmo = MaxAmmo;
 	CanFire = true;
 
-	UE_LOG(LogTemp, Log, TEXT("Shotgun reloaded! Ammo reset to: %d"), CurrentAmmo);
+	UE_LOG(LogTemp, Warning, TEXT("Shotgun reloaded! Ammo reset to: %d"), CurrentAmmo);
 }
 
 void AShotgun::Zoom(bool bIsZoom)
 {
+	if (!CurrentCharacter || !CurrentCharacter->GetFollowCamera())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Zoom failed: CurrentCharacter or Camera is NULL"));
+		return;
+	}
 
+	if (bIsZoom)
+	{
+		CurrentCharacter->GetFollowCamera()->SetFieldOfView(55.f);
+		UE_LOG(LogTemp, Warning, TEXT("Zoom In"));
+	}
+	else
+	{
+		CurrentCharacter->GetFollowCamera()->SetFieldOfView(90.f);
+		UE_LOG(LogTemp, Warning, TEXT("Zoom Out"));
+	}
 }

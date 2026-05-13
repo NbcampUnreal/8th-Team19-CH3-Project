@@ -72,6 +72,18 @@ class ASpartaSurvivalCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* CrouchAction;
 
+	//총기 액션
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")
+	UInputMappingContext* WeaponMappingContext;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")
+	UInputAction* FireAction;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")
+	UInputAction* ReloadAction;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")
+	UInputAction* ZoomAction;
+
 public:
 	ASpartaSurvivalCharacter();
 
@@ -253,8 +265,8 @@ private:
 	bool bWeaponMovePose = false;
 
 	FRotator WeaponBaseRot = FRotator(-5.f, 170.f, 0.f);
-	FRotator WeaponMoveOffsetRot = FRotator(15.f, -22.f, 0.f);
-	FRotator WeaponJumpOffsetRot = FRotator(15.f, -22.f, 0.f); 
+	FRotator WeaponMoveOffsetRot = FRotator(13.f, -30.f, 50.f);
+	FRotator WeaponJumpOffsetRot = FRotator(10.f, -22.f, 50.f);
 
 	float WeaponRotInterpSpeed = 10.f;
 };

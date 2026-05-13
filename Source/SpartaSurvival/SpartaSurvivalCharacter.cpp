@@ -47,12 +47,12 @@ ASpartaSurvivalCharacter::ASpartaSurvivalCharacter()
 	// 컨트롤러 회전을 캐릭터 회전에 직접 반영하지 않습니다.
 	// 카메라 붐만 컨트롤러를 따라 회전하고, 캐릭터는 이동 방향을 향합니다.
 	bUseControllerRotationPitch = false;
-	bUseControllerRotationYaw = false;
+	bUseControllerRotationYaw = true;
 	bUseControllerRotationRoll = false;
 
 	// ─── 이동 컴포넌트 설정 ────────────────────────────────────────
 	UCharacterMovementComponent* MovComp = GetCharacterMovement();
-	MovComp->bOrientRotationToMovement = true;           // 이동 방향으로 캐릭터 회전
+	MovComp->bOrientRotationToMovement = false;           // 이동 방향으로 캐릭터 회전
 	MovComp->RotationRate = FRotator(0.f, 500.f, 0.f);
 	MovComp->JumpZVelocity = 700.f;
 	MovComp->AirControl = 0.35f;
@@ -162,6 +162,10 @@ void ASpartaSurvivalCharacter::NotifyControllerChanged()
 			ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
 		{
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
+			if (WeaponMappingContext)
+			{
+				Subsystem->AddMappingContext(WeaponMappingContext, 1);
+			}
 		}
 	}
 }
@@ -212,22 +216,20 @@ void ASpartaSurvivalCharacter::SetupPlayerInputComponent(UInputComponent* Player
 		}
 
 		//총기 액션
-		if (AGunController* GunController = Cast<AGunController>(GetController()))
+		if (FireAction)
 		{
-			if (GunController->FireAction)
-			{
-				EIC->BindAction(GunController->FireAction, ETriggerEvent::Triggered, this, &ASpartaSurvivalCharacter::Fire);
-			}
-			if (GunController->ReloadAction)
-			{
-				EIC->BindAction(GunController->ReloadAction, ETriggerEvent::Triggered, this, &ASpartaSurvivalCharacter::Reload);
-			}
-			if (GunController->ZoomAction)
-			{
-				EIC->BindAction(GunController->ZoomAction, ETriggerEvent::Triggered, this, &ASpartaSurvivalCharacter::StartZoom);
-				EIC->BindAction(GunController->ZoomAction, ETriggerEvent::Completed, this, &ASpartaSurvivalCharacter::EndZoom);
-			}
+			EIC->BindAction(FireAction, ETriggerEvent::Started, this, &ASpartaSurvivalCharacter::Fire);
+		}
 
+		if (ReloadAction)
+		{
+			EIC->BindAction(ReloadAction, ETriggerEvent::Started, this, &ASpartaSurvivalCharacter::Reload);
+		}
+
+		if (ZoomAction)
+		{
+			EIC->BindAction(ZoomAction, ETriggerEvent::Started, this, &ASpartaSurvivalCharacter::StartZoom);
+			EIC->BindAction(ZoomAction, ETriggerEvent::Completed, this, &ASpartaSurvivalCharacter::EndZoom);
 		}
 	}
 	else
@@ -403,14 +405,29 @@ void ASpartaSurvivalCharacter::Fire()
 {
 	if (EquippedGun)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("Fire called. EquippedGun: %s / Class: %s"),
+			*EquippedGun->GetName(),
+			*EquippedGun->GetClass()->GetName()
+		);
+
 		EquippedGun->Fire();
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Fire called, but EquippedGun is NULL."));
 	}
 }
 void ASpartaSurvivalCharacter::Reload()
 {
+	UE_LOG(LogTemp, Warning, TEXT("Character Reload called"));
+
 	if (EquippedGun)
 	{
 		EquippedGun->Reload();
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Reload failed: EquippedGun NULL"));
 	}
 }
 void ASpartaSurvivalCharacter::StartZoom()
@@ -420,6 +437,7 @@ void ASpartaSurvivalCharacter::StartZoom()
 		EquippedGun->Zoom(true);
 	}
 }
+
 void ASpartaSurvivalCharacter::EndZoom()
 {
 	if (EquippedGun)

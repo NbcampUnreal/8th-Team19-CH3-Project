@@ -19,7 +19,8 @@ public:
 	virtual void BeginPlay() override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")
-	UInputMappingContext* InputMappingContext;
+	UInputMappingContext* WeaponMappingContext;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")
 	UInputAction* FireAction;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")

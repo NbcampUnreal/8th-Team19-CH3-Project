@@ -18,7 +18,7 @@ private:
 	AActor* LastHitActor; // 마지막으로 충돌한 액터를 저장하는 변수
 
 	FTimerHandle ReloadTimerHandle;// 재장전 타이머 핸들
-	void EndReload(); //Reload 끝내기 애니메이션이나 재장전 완료 후 호출되는 함수
+	void EndReload();
 
 	float ShotgunRange = 1000.f;
 	int32 PelletCount = 8;
@@ -27,7 +27,6 @@ private:
 	
 protected:
 	ASpartaSurvivalCharacter* CurrentCharacter;
-
 
 public:
 	AShotgun();

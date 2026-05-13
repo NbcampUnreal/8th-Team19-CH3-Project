@@ -3,7 +3,7 @@
 #include "EnhancedInputSubsystems.h"
 
 AGunController::AGunController()
-	:InputMappingContext(nullptr), FireAction(nullptr), ReloadAction(nullptr), ZoomAction(nullptr)
+	:WeaponMappingContext(nullptr), FireAction(nullptr), ReloadAction(nullptr), ZoomAction(nullptr)
 {
 	PrimaryActorTick.bCanEverTick = false;
 }
@@ -17,7 +17,7 @@ void AGunController::BeginPlay()
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem =
 			LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
 		{
-			Subsystem->AddMappingContext(InputMappingContext, 0);
+			Subsystem->AddMappingContext(WeaponMappingContext, 1);
 		}
 	}
 }
