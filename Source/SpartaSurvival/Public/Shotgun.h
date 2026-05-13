@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Components/BillboardComponent.h"
+#include "Animation/AnimMontage.h"
 #include "CoreMinimal.h"
 #include "DefaultGun.h"
 #include "Shotgun.generated.h"
@@ -37,6 +38,13 @@ protected:
 
 	FTimerHandle MuzzleFlashTimer;
 	int32 MuzzleFlashIndex = 0;
+
+	// animation reload
+	bool bIsReloading = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+	UAnimMontage* ReloadMontage;
+
 public:
 	AShotgun();
 

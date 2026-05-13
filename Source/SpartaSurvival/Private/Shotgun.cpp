@@ -3,6 +3,8 @@
 #include "../SpartaSurvivalCharacter.h"
 #include "DrawDebugHelpers.h"
 #include "Camera/CameraComponent.h"
+#include "Animation/AnimInstance.h"
+#include "Animation/AnimMontage.h"
 
 
 AShotgun::AShotgun()
@@ -179,8 +181,20 @@ void AShotgun::Fire()
 void AShotgun::Reload()
 {
 	if (!CanFire || CurrentAmmo == MaxAmmo) return;
+	if (bIsReloading) return;
+
+	bIsReloading = true;
 	CanFire = false;
-	UE_LOG(LogTemp, Warning, TEXT("Realoading!!! %d"), CurrentAmmo);
+
+	// 재장전 애니메이션 재생
+	if (CurrentCharacter && ReloadMontage)
+	{
+		if (UAnimInstance* Anim = CurrentCharacter->GetMesh()->GetAnimInstance())
+		{
+			Anim->Montage_Play(ReloadMontage, 1.0f);
+		}
+	}
+
 	GetWorld()->GetTimerManager().SetTimer(
 		ReloadTimerHandle,
 		this,
@@ -194,7 +208,7 @@ void AShotgun::EndReload()
 {
 	CurrentAmmo = MaxAmmo;
 	CanFire = true;
-
+	bIsReloading = false;
 	UE_LOG(LogTemp, Warning, TEXT("Shotgun reloaded! Ammo reset to: %d"), CurrentAmmo);
 }
 
