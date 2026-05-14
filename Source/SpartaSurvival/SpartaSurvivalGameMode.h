@@ -22,6 +22,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "GameSystem")
 	void GameOver();
 
+	UFUNCTION(BlueprintCallable, Category = "GameSystem")
+	void GameClear();
+
 	//점수
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GameData")
 	int32 CurrentScore = 0;
