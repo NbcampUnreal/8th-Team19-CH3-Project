@@ -2,12 +2,16 @@
 
 #pragma once
 
+#include "Sound/SoundBase.h"
 #include "Components/BillboardComponent.h"
 #include "Animation/AnimMontage.h"
 #include "CoreMinimal.h"
 #include "DefaultGun.h"
 #include "Shotgun.generated.h"
 
+
+
+class EnemyBase; 
 class ASpartaSurvivalCharacter;
 class TimerManager;
 
@@ -18,14 +22,17 @@ class SPARTASURVIVAL_API AShotgun : public ADefaultGun
 private:
 	AActor* LastHitActor; // 마지막으로 충돌한 액터를 저장하는 변수
 
-	FTimerHandle ReloadTimerHandle;// 재장전 타이머 핸들
-	void EndReload();
+	FTimerHandle ReloadTimer;// 재장전 타이머 핸들
+	FTimerHandle MeleeTimer; // 근접 공격 타이머 핸들
 
-	float ShotgunRange = 1000.f;
-	int32 PelletCount = 8;
-	float SpreadAngle = 8.f;
-	float DamagePerPellet = 10.f;
-	
+	void EndReload();
+	void EndMelee();
+
+	float ShotgunRange;
+	int32 PelletCount;
+	float SpreadAngle;
+	float DamagePerPellet;
+
 protected:
 	ASpartaSurvivalCharacter* CurrentCharacter;
 
@@ -45,15 +52,39 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
 	UAnimMontage* ReloadMontage;
 
+	//animation melee
+	bool bIsMeleeing = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+	UAnimMontage* MeleeMontage;
+
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound")
+	USoundBase* FireSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound")
+	USoundBase* ReloadSound;
+
 public:
 	AShotgun();
 
-	AActor* GetHitActor() const;
 	USceneComponent* GetGripPoint() const { return GripPoint; }
+	USceneComponent* GetSupportPoint() const { return SupportPoint; }
 	UStaticMeshComponent* GetGunMesh() const { return GunMesh; }
 
+public:
 	virtual void Fire() override;
 	virtual void Reload() override;
 	virtual void Zoom(bool bIsZoom) override;
 	virtual void EquipToCharacter(ASpartaSurvivalCharacter* Character) override;
+	virtual void Melee() override;
+
+	//ui나 외부에서 필요한 함수!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+public:
+	int32 GetCurrentAmmo() const { return CurrentAmmo; }
+	AActor* GetHitActor() const { return LastHitActor; };
+
+	bool IsReloading() const { return bIsReloading; }
+	bool IsCanFire() const { return CanFire; }
+
 };

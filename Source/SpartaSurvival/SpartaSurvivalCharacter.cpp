@@ -14,7 +14,6 @@
 
 //총기 사용 해더
 #include "Components/SceneComponent.h"
-#include "GunController.h"
 #include "DefaultGun.h"
 #include "Shotgun.h"
 #include "UObject/ConstructorHelpers.h"
@@ -36,10 +35,10 @@ ASpartaSurvivalCharacter::ASpartaSurvivalCharacter()
 	WeaponSocket->SetRelativeLocation(FVector::ZeroVector);
 	WeaponSocket->SetRelativeRotation(WeaponBaseRot);
 
-	SupportSocket = CreateDefaultSubobject<USceneComponent>(TEXT("SupportPoint"));
-	SupportSocket->SetupAttachment(GetMesh(), TEXT("hand_l"));
-	SupportSocket->SetRelativeLocation(FVector::ZeroVector);
-	SupportSocket->SetRelativeRotation(FRotator::ZeroRotator);
+	//SupportSocket = CreateDefaultSubobject<USceneComponent>(TEXT("SupportPoint"));
+	//SupportSocket->SetupAttachment(GetMesh(), TEXT("hand_l"));
+	//SupportSocket->SetRelativeLocation(FVector::ZeroVector);
+	//SupportSocket->SetRelativeRotation(FRotator::ZeroRotator);
 
 	// ─── 콜리전 캡슐 ───────────────────────────────────────────────
 	// Manny 메시 기본값: 반지름 34, 절반 높이 88
@@ -146,21 +145,37 @@ void ASpartaSurvivalCharacter::Tick(float DeltaTime)
 	float SmoothedZ = FMath::FInterpTo(CurrentOffset.Z, TargetCameraZ, DeltaTime, CrouchCameraInterpSpeed);
 	CameraBoom->SetRelativeLocation(FVector(CurrentOffset.X, CurrentOffset.Y, SmoothedZ));
 
-	if (WeaponSocket)
-	{
-		FRotator TargetRot = WeaponBaseRot; 
-		if (bIsInAir) { TargetRot = WeaponJumpOffsetRot + WeaponBaseRot; }
-		else if (bWeaponMovePose) { TargetRot = WeaponMoveOffsetRot + WeaponBaseRot; }
-		else TargetRot = WeaponBaseRot;
+	//if (WeaponSocket)
+	//{
+	//	FRotator TargetRot = WeaponBaseRot; 
+	//	if (bIsInAir) { TargetRot = WeaponJumpOffsetRot + WeaponBaseRot; }
+	//	else if (bWeaponMovePose) { TargetRot = WeaponMoveOffsetRot + WeaponBaseRot; }
+	//	else TargetRot = WeaponBaseRot;
 
-		WeaponSocket->SetRelativeRotation(
-			FMath::RInterpTo(
-				WeaponSocket->GetRelativeRotation(),
-				TargetRot,
-				DeltaTime,
-				WeaponRotInterpSpeed
-			)
-		);
+	//	WeaponSocket->SetRelativeRotation(
+	//		FMath::RInterpTo(
+	//			WeaponSocket->GetRelativeRotation(),
+	//			TargetRot,
+	//			DeltaTime,
+	//			WeaponRotInterpSpeed
+	//		)
+	//	);
+	//}
+	if (AShotgun* Shotgun = Cast<AShotgun>(EquippedGun))
+	{
+		if (Shotgun->GetSupportPoint())
+		{
+			FVector WorldLoc = Shotgun->GetSupportPoint()->GetComponentLocation();
+
+			LeftHandIKLocation =
+				GetMesh()->GetComponentTransform().InverseTransformPosition(WorldLoc);
+
+			bUseLeftHandIK = true;
+		}
+	}
+	else
+	{
+		bUseLeftHandIK = false;
 	}
 }
 
@@ -244,6 +259,11 @@ void ASpartaSurvivalCharacter::SetupPlayerInputComponent(UInputComponent* Player
 			EIC->BindAction(ZoomAction, ETriggerEvent::Started, this, &ASpartaSurvivalCharacter::StartZoom);
 			EIC->BindAction(ZoomAction, ETriggerEvent::Completed, this, &ASpartaSurvivalCharacter::EndZoom);
 		}
+
+		if (MeleeAction)
+		{
+			EIC->BindAction(MeleeAction, ETriggerEvent::Started, this, &ASpartaSurvivalCharacter::Melee);
+		}
 	}
 	else
 	{
@@ -257,7 +277,7 @@ void ASpartaSurvivalCharacter::SetupPlayerInputComponent(UInputComponent* Player
 
 void ASpartaSurvivalCharacter::Move(const FInputActionValue& Value)
 {
-	bWeaponMovePose = true;
+	//bWeaponMovePose = true;
 
 	FVector2D MovementVector = Value.Get<FVector2D>();
 	bHasMovementInput = !MovementVector.IsNearlyZero();
@@ -289,7 +309,7 @@ void ASpartaSurvivalCharacter::Look(const FInputActionValue& Value)
 
 void ASpartaSurvivalCharacter::StopMove()
 {
-	bWeaponMovePose = false;
+	//bWeaponMovePose = false;
 	bHasMovementInput = false;
 	bIsMovingForward  = false;
 }
@@ -556,7 +576,6 @@ void ASpartaSurvivalCharacter::StartZoom()
 		EquippedGun->Zoom(true);
 	}
 }
-
 void ASpartaSurvivalCharacter::EndZoom()
 {
 	if (EquippedGun)
@@ -564,4 +583,12 @@ void ASpartaSurvivalCharacter::EndZoom()
 		EquippedGun->Zoom(false);
 	}
 }
+void ASpartaSurvivalCharacter::Melee()
+{
+	if (EquippedGun)
+	{
+		EquippedGun->Melee();
+	}
+}
+
 

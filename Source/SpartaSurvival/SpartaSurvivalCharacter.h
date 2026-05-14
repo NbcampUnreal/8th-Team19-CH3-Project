@@ -72,18 +72,6 @@ class ASpartaSurvivalCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* CrouchAction;
 
-	//총기 액션
-protected:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")
-	UInputMappingContext* WeaponMappingContext;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")
-	UInputAction* FireAction;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")
-	UInputAction* ReloadAction;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")
-	UInputAction* ZoomAction;
-
 public:
 	ASpartaSurvivalCharacter();
 
@@ -287,12 +275,34 @@ public:
 
 
 //총기 관련 프로퍼티와 함수들
+//총기 액션
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")
+	UInputMappingContext* WeaponMappingContext;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")
+	UInputAction* FireAction;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")
+	UInputAction* ReloadAction;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")
+	UInputAction* ZoomAction;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")
+	UInputAction* MeleeAction;
+
+public:
+
+	//손붙이기 왼손
+	UPROPERTY(BlueprintReadOnly, Category = "IK")
+	FVector LeftHandIKLocation = FVector::ZeroVector;
+
+	UPROPERTY(BlueprintReadOnly, Category = "IK")
+	bool bUseLeftHandIK = false;
 
 public:
 	void SetEquippedGun(ADefaultGun* NewGun);
 
 	USceneComponent* GetWeaponSocket() const { return WeaponSocket; }
-	USceneComponent* GetSupportSocket() const { return SupportSocket; }
+	//USceneComponent* GetSupportSocket() const { return SupportSocket; }
 
 	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "Gun")
 	AShotgun* StartingShotgun = nullptr;
@@ -310,8 +320,8 @@ protected:
 	//component
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")
 	USceneComponent* WeaponSocket = nullptr;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")
-	USceneComponent* SupportSocket = nullptr;
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")
+	//USceneComponent* SupportSocket = nullptr;
 
 
 	// 총기 액션 함수들 
@@ -319,13 +329,14 @@ protected:
 	void Reload();
 	void StartZoom();
 	void EndZoom();
+	void Melee();
 
 private:
-	bool bWeaponMovePose = false;
+	//bool bWeaponMovePose = false;
 
 	FRotator WeaponBaseRot = FRotator(-5.f, 170.f, 0.f);
-	FRotator WeaponMoveOffsetRot = FRotator(13.f, -30.f, 50.f);
-	FRotator WeaponJumpOffsetRot = FRotator(10.f, -22.f, 50.f);
+	//FRotator WeaponMoveOffsetRot = FRotator(13.f, -30.f, 50.f);
+	//FRotator WeaponJumpOffsetRot = FRotator(10.f, -22.f, 50.f);
 
-	float WeaponRotInterpSpeed = 10.f;
+	//float WeaponRotInterpSpeed = 10.f;
 };

@@ -5,6 +5,11 @@
 #include "Camera/CameraComponent.h"
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
+#include "EnemyBase.h"
+#include "Engine/DamageEvents.h"
+#include "GameFramework/Controller.h"
+#include "Kismet/GameplayStatics.h"
+
 
 
 AShotgun::AShotgun()
@@ -15,6 +20,13 @@ AShotgun::AShotgun()
 	CurrentAmmo = MaxAmmo;
 	CanFire = true;
 
+	ShotgunRange = 1000.f;
+	PelletCount = 8;
+	SpreadAngle = 8.f;
+	DamagePerPellet = 10.f;
+
+	MeleeDuration = .8f;
+	MeleeRange = 150.f;
 
 	//mesh 적용하기 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshAsset(
@@ -57,16 +69,10 @@ AShotgun::AShotgun()
 	if (Flash03.Succeeded()) MuzzleFlashTextures.Add(Flash03.Object);
 }
 
-//마지막으로 맞은 액터 반환
-AActor* AShotgun::GetHitActor() const 
-{
-	return LastHitActor;
-}
-
 //캐릭터에게 장착
 void AShotgun::EquipToCharacter(ASpartaSurvivalCharacter* Character)
 {
-	if (!Character || !Character->GetWeaponSocket() || !Character->GetSupportSocket() || !GripPoint || !SupportPoint || !GetRootComponent()) return;
+	if (!Character || !Character->GetWeaponSocket() || !GripPoint || !SupportPoint || !GetRootComponent()) return;
 
 	CurrentCharacter = Character;
 	Character->SetEquippedGun(this);
@@ -85,11 +91,6 @@ void AShotgun::EquipToCharacter(ASpartaSurvivalCharacter* Character)
 	// 샷건 Actor 전체를 이동해서 GripPoint를 WeaponSocket 위치에 맞춤
 	AddActorWorldOffset(Delta);
 
-	//support point를 SupportSocket에 붙임
-	GetSupportPoint()->AttachToComponent(
-		Character->GetSupportSocket(),
-		FAttachmentTransformRules::SnapToTargetNotIncludingScale
-	);
 }
 
 //샷건 기본 로직 구현
@@ -101,6 +102,15 @@ void AShotgun::Fire()
 		if (!MuzzlePoint) return;
 		
 		CurrentAmmo--;
+
+		if (FireSound)
+		{
+			UGameplayStatics::PlaySoundAtLocation(
+				this,
+				FireSound,
+				MuzzlePoint->GetComponentLocation()
+			);
+		}
 
 		UCameraComponent* CurrentCam = CurrentCharacter->GetFollowCamera(); 
 		if (!CurrentCam) return;
@@ -138,6 +148,23 @@ void AShotgun::Fire()
 			{
 				LastHitActor = HitResult.GetActor(); //Hit 액터 저장
 				UE_LOG(LogTemp, Warning, TEXT("Hit: %s"), *HitResult.GetActor()->GetName()); //충돌한 액터 이름 로그
+
+				AEnemyBase* HitEnemy = Cast<AEnemyBase>(LastHitActor);
+
+				//데미지 처리 총기 line
+				if (HitEnemy)
+				{
+					FPointDamageEvent PointDamageEvent;
+					PointDamageEvent.Damage = DamagePerPellet;
+					PointDamageEvent.HitInfo = HitResult;
+					PointDamageEvent.ShotDirection = ShotDirection;
+					PointDamageEvent.ShotDirection = ShotDirection;
+
+					AController* InstigatorController =
+						CurrentCharacter ? CurrentCharacter->GetController() : nullptr;
+
+					HitEnemy->TakeDamage(DamagePerPellet, PointDamageEvent, InstigatorController, this);
+				}
 			}
 			else
 			{
@@ -169,8 +196,6 @@ void AShotgun::Fire()
 				false
 			);
 		}
-
-
 	}
 	else
 	{
@@ -181,23 +206,31 @@ void AShotgun::Fire()
 //재장전
 void AShotgun::Reload()
 {
-	if (!CanFire || CurrentAmmo == MaxAmmo) return;
 	if (bIsReloading) return;
 
 	bIsReloading = true;
 	CanFire = false;
 
-	// 재장전 애니메이션 재생
-	if (CurrentCharacter && ReloadMontage)
+	if (ReloadSound)
 	{
-		if (UAnimInstance* Anim = CurrentCharacter->GetMesh()->GetAnimInstance())
-		{
-			Anim->Montage_Play(ReloadMontage, 1.0f);
-		}
+		UGameplayStatics::PlaySoundAtLocation(
+			this,
+			ReloadSound,
+			GetActorLocation()
+		);
 	}
 
+	//ANIMATION 
+	UAnimInstance* AnimInstance = CurrentCharacter->GetMesh()->GetAnimInstance();
+	if (!AnimInstance)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Reload failed: AnimInstance NULL"));
+		return;
+	}
+
+	float PlayResult = AnimInstance->Montage_Play(ReloadMontage, 1.0f);
 	GetWorld()->GetTimerManager().SetTimer(
-		ReloadTimerHandle,
+		ReloadTimer,
 		this,
 		&AShotgun::EndReload,
 		ReloadDuration,
@@ -231,4 +264,36 @@ void AShotgun::Zoom(bool bIsZoom)
 		CurrentCharacter->GetFollowCamera()->SetFieldOfView(90.f);
 		UE_LOG(LogTemp, Warning, TEXT("Zoom Out"));
 	}
+}
+
+void AShotgun::Melee()
+{
+	if (bIsMeleeing) return;
+
+	bIsMeleeing = true;
+	CanFire = false;
+
+	//ANIMATION 
+	UAnimInstance* AnimInstance = CurrentCharacter->GetMesh()->GetAnimInstance();
+	if (!AnimInstance)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Reload failed: AnimInstance NULL"));
+		return;
+	}
+
+	float PlayResult = AnimInstance->Montage_Play(MeleeMontage, 1.0f);
+	GetWorld()->GetTimerManager().SetTimer(
+		MeleeTimer,
+		this,
+		&AShotgun::EndMelee,
+		MeleeDuration,
+		false
+	);
+}
+
+void AShotgun::EndMelee()
+{
+	bIsMeleeing = false;
+	CanFire = true;
+	UE_LOG(LogTemp, Warning, TEXT("Melee attack ended."));
 }

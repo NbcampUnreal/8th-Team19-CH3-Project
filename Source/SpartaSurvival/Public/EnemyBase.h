@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
@@ -22,11 +22,11 @@ class SPARTASURVIVAL_API AEnemyBase : public ACharacter
 public:
     AEnemyBase();
 
+    // 외부에서 사용하기 위해 public 변경
+    virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+
 protected:
     virtual void BeginPlay() override;
-
-    
-    virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 
     UFUNCTION(BlueprintCallable, Category = "Combat")
     void Die();
@@ -54,7 +54,7 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
     bool bIsAttacking = false;
 
-    // --- �ִϸ��̼� ���� ---
+    // --- ¾Ö´Ï¸ÞÀÌ¼Ç °ü·Ã ---
     UPROPERTY(EditAnywhere, Category = "Effects")
     UAnimMontage* AttackMontage;
 

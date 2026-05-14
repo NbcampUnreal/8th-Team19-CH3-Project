@@ -40,3 +40,6 @@ void ADefaultGun::Reload()
 void ADefaultGun::Zoom(bool bIsZoom)
 {
 }
+void ADefaultGun::Melee()
+{
+}
