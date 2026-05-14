@@ -1,5 +1,7 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 #include "Shotgun.h"
+#include "GameFramework/PlayerController.h"
+#include "Camera/PlayerCameraManager.h"
 #include "../SpartaSurvivalCharacter.h"
 #include "DrawDebugHelpers.h"
 #include "Camera/CameraComponent.h"
@@ -29,13 +31,13 @@ AShotgun::AShotgun()
 	MeleeRange = 150.f;
 
 	//mesh 적용하기 
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshAsset(
-		TEXT("/Game/GunMeshes/ShotgunPrototype.ShotgunPrototype")
+	static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshAsset(
+		TEXT("/Game/GunMeshes/ShotgunFinal.ShotgunFinal")
 	);
 
 	if (MeshAsset.Succeeded())
 	{
-		GunMesh->SetStaticMesh(MeshAsset.Object);
+		GunMesh->SetSkeletalMesh(MeshAsset.Object);
 	}
 
 	GunMesh->SetRelativeScale3D(FVector(.38f, .38f, .38f));
@@ -67,12 +69,22 @@ AShotgun::AShotgun()
 	if (Flash01.Succeeded()) MuzzleFlashTextures.Add(Flash01.Object);
 	if (Flash02.Succeeded()) MuzzleFlashTextures.Add(Flash02.Object);
 	if (Flash03.Succeeded()) MuzzleFlashTextures.Add(Flash03.Object);
+
+	//reload animation
+	static ConstructorHelpers::FObjectFinder<UAnimationAsset> ReloadAnimAsset(
+		TEXT("/Game/GunMeshes/ShotgunFinal_Anim.ShotgunFinal_Anim")
+	);
+
+	if (ReloadAnimAsset.Succeeded())
+	{
+		GunReloadAnimation = ReloadAnimAsset.Object;
+	}
 }
 
 //캐릭터에게 장착
 void AShotgun::EquipToCharacter(ASpartaSurvivalCharacter* Character)
 {
-	if (!Character || !Character->GetWeaponSocket() || !GripPoint || !SupportPoint || !GetRootComponent()) return;
+	if (!Character || !Character->GetWeaponSocket() || !GripPoint || !GetRootComponent()) return;
 
 	CurrentCharacter = Character;
 	Character->SetEquippedGun(this);
@@ -110,6 +122,16 @@ void AShotgun::Fire()
 				FireSound,
 				MuzzlePoint->GetComponentLocation()
 			);
+		}
+
+		if (CurrentCharacter && FireCameraShake)
+		{
+			APlayerController* PC = Cast<APlayerController>(CurrentCharacter->GetController());
+
+			if (PC && PC->PlayerCameraManager)
+			{
+				PC->PlayerCameraManager->StartCameraShake(FireCameraShake, 10.f);
+			}
 		}
 
 		UCameraComponent* CurrentCam = CurrentCharacter->GetFollowCamera(); 
@@ -206,29 +228,35 @@ void AShotgun::Fire()
 //재장전
 void AShotgun::Reload()
 {
-	if (bIsReloading) return;
+	if (bIsReloading || CurrentAmmo == MaxAmmo) return;
 
 	bIsReloading = true;
 	CanFire = false;
 
+	if (CurrentCharacter)
+	{
+		CurrentCharacter->SetBlockLeftHandIK(true);
+	}
+
+	if (GunMesh && GunReloadAnimation)
+	{
+		GunMesh->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+		GunMesh->PlayAnimation(GunReloadAnimation, false);
+	}
+
 	if (ReloadSound)
 	{
-		UGameplayStatics::PlaySoundAtLocation(
-			this,
-			ReloadSound,
-			GetActorLocation()
-		);
+		UGameplayStatics::PlaySoundAtLocation(this, ReloadSound, GetActorLocation());
 	}
 
-	//ANIMATION 
-	UAnimInstance* AnimInstance = CurrentCharacter->GetMesh()->GetAnimInstance();
-	if (!AnimInstance)
+	if (CurrentCharacter && CurrentCharacter->GetMesh())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Reload failed: AnimInstance NULL"));
-		return;
+		if (UAnimInstance* AnimInstance = CurrentCharacter->GetMesh()->GetAnimInstance())
+		{
+			AnimInstance->Montage_Play(ReloadMontage, 1.0f);
+		}
 	}
 
-	float PlayResult = AnimInstance->Montage_Play(ReloadMontage, 1.0f);
 	GetWorld()->GetTimerManager().SetTimer(
 		ReloadTimer,
 		this,
@@ -243,6 +271,13 @@ void AShotgun::EndReload()
 	CurrentAmmo = MaxAmmo;
 	CanFire = true;
 	bIsReloading = false;
+
+	if (CurrentCharacter)
+	{
+		CurrentCharacter->SetBlockLeftHandIK(false);
+	}
+
+
 	UE_LOG(LogTemp, Warning, TEXT("Shotgun reloaded! Ammo reset to: %d"), CurrentAmmo);
 }
 

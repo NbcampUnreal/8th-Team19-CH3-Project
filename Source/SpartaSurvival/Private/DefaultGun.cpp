@@ -4,7 +4,7 @@
 #include "DefaultGun.h"
 #include "../SpartaSurvivalCharacter.h"
 #include "Components/SceneComponent.h"
-#include "Components/StaticMeshComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 
 // Sets default values
 ADefaultGun::ADefaultGun()
@@ -15,7 +15,7 @@ ADefaultGun::ADefaultGun()
 	GunRoot = CreateDefaultSubobject<USceneComponent>(TEXT("GunRoot"));
 	RootComponent = GunRoot;
 
-	GunMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("GunMesh"));
+	GunMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("GunMesh"));
 	GunMesh->SetupAttachment(GunRoot);
 
 	MuzzlePoint = CreateDefaultSubobject<USceneComponent>(TEXT("MuzzlePoint"));
@@ -24,8 +24,11 @@ ADefaultGun::ADefaultGun()
 	GripPoint = CreateDefaultSubobject<USceneComponent>(TEXT("GripPoint"));
 	GripPoint->SetupAttachment(GunMesh);
 
-	SupportPoint = CreateDefaultSubobject<USceneComponent>(TEXT("LeftHandGrip"));
+	SupportPoint = CreateDefaultSubobject<USceneComponent>(TEXT("SupportPoint"));
 	SupportPoint->SetupAttachment(GunMesh);
+
+	SupportPointMoving = CreateDefaultSubobject<USceneComponent>(TEXT("SupportPointMoving"));
+	SupportPointMoving->SetupAttachment(GunMesh);
 
 }
 void ADefaultGun::EquipToCharacter(ASpartaSurvivalCharacter* Character)

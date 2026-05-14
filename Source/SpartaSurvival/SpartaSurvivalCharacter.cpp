@@ -161,16 +161,41 @@ void ASpartaSurvivalCharacter::Tick(float DeltaTime)
 	//		)
 	//	);
 	//}
+
+	//왼손
 	if (AShotgun* Shotgun = Cast<AShotgun>(EquippedGun))
 	{
-		if (Shotgun->GetSupportPoint())
+		if (bIsMoving)
 		{
-			FVector WorldLoc = Shotgun->GetSupportPoint()->GetComponentLocation();
+			if (Shotgun->GetSupportPointMoving() && !bBlockLeftHandIK)
+			{
+				FVector WorldLoc = Shotgun->GetSupportPointMoving()->GetComponentLocation();
 
-			LeftHandIKLocation =
-				GetMesh()->GetComponentTransform().InverseTransformPosition(WorldLoc);
+				LeftHandIKLocation =
+					GetMesh()->GetComponentTransform().InverseTransformPosition(WorldLoc);
 
-			bUseLeftHandIK = true;
+				bUseLeftHandIK = true;
+			}
+			else
+			{
+				bUseLeftHandIK = false;
+			}
+		}
+		else if (!bIsMoving)
+		{
+			if (Shotgun->GetSupportPoint() && !bBlockLeftHandIK)
+			{
+				FVector WorldLoc = Shotgun->GetSupportPoint()->GetComponentLocation();
+
+				LeftHandIKLocation =
+					GetMesh()->GetComponentTransform().InverseTransformPosition(WorldLoc);
+
+				bUseLeftHandIK = true;
+			}
+			else
+			{
+				bUseLeftHandIK = false;
+			}
 		}
 	}
 	else
@@ -278,6 +303,7 @@ void ASpartaSurvivalCharacter::SetupPlayerInputComponent(UInputComponent* Player
 void ASpartaSurvivalCharacter::Move(const FInputActionValue& Value)
 {
 	//bWeaponMovePose = true;
+	bIsMoving = true;
 
 	FVector2D MovementVector = Value.Get<FVector2D>();
 	bHasMovementInput = !MovementVector.IsNearlyZero();
@@ -310,6 +336,7 @@ void ASpartaSurvivalCharacter::Look(const FInputActionValue& Value)
 void ASpartaSurvivalCharacter::StopMove()
 {
 	//bWeaponMovePose = false;
+	bIsMoving = false;
 	bHasMovementInput = false;
 	bIsMovingForward  = false;
 }
@@ -535,7 +562,14 @@ void ASpartaSurvivalCharacter::Landed(const FHitResult& Hit)
 }
 
 //총기 액션 함수들 ───────────────────────────────────────
-
+void ASpartaSurvivalCharacter::SetIsMoving(bool bMove)
+{
+	bIsMoving = bMove;
+}
+void ASpartaSurvivalCharacter::SetBlockLeftHandIK(bool bBlock)
+{
+	bBlockLeftHandIK = bBlock;
+}
 void ASpartaSurvivalCharacter::SetEquippedGun(ADefaultGun* ToBeEquippedGun)
 {
 	EquippedGun = ToBeEquippedGun;

@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include "Camera/CameraShakeBase.h"
+#include "Animation/AnimationAsset.h"
 #include "Sound/SoundBase.h"
 #include "Components/BillboardComponent.h"
 #include "Animation/AnimMontage.h"
@@ -58,19 +60,25 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
 	UAnimMontage* MeleeMontage;
 
-protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound")
 	USoundBase* FireSound;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound")
 	USoundBase* ReloadSound;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+	UAnimationAsset* GunReloadAnimation;
+
+	UPROPERTY(EditAnywhere, Category = "Camera")
+	TSubclassOf<UCameraShakeBase> FireCameraShake;
+
 public:
 	AShotgun();
 
 	USceneComponent* GetGripPoint() const { return GripPoint; }
 	USceneComponent* GetSupportPoint() const { return SupportPoint; }
-	UStaticMeshComponent* GetGunMesh() const { return GunMesh; }
+	USceneComponent* GetSupportPointMoving() const { return SupportPointMoving; }
+	USkeletalMeshComponent* GetGunMesh() const { return GunMesh; }
 
 public:
 	virtual void Fire() override;
