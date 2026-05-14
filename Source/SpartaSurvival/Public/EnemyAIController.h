@@ -9,7 +9,6 @@
 UCLASS()
 class SPARTASURVIVAL_API AEnemyAIController : public AAIController
 {
-
 	GENERATED_BODY()
 
 protected:
