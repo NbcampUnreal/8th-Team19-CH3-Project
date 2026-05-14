@@ -2,7 +2,7 @@
 
 
 #include "DefaultGun.h"
-#include "MainCharacter.h"
+#include "../SpartaSurvivalCharacter.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
 
@@ -24,10 +24,11 @@ ADefaultGun::ADefaultGun()
 	GripPoint = CreateDefaultSubobject<USceneComponent>(TEXT("GripPoint"));
 	GripPoint->SetupAttachment(GunMesh);
 
-	SupportPoint = CreateDefaultSubobject<USceneComponent>(TEXT("SupportPoint"));
+	SupportPoint = CreateDefaultSubobject<USceneComponent>(TEXT("LeftHandGrip"));
 	SupportPoint->SetupAttachment(GunMesh);
+
 }
-void ADefaultGun::EquipToCharacter(AMainCharacter* Character)
+void ADefaultGun::EquipToCharacter(ASpartaSurvivalCharacter* Character)
 {
 }
 void ADefaultGun::Fire()
@@ -37,5 +38,8 @@ void ADefaultGun::Reload()
 {
 }
 void ADefaultGun::Zoom(bool bIsZoom)
+{
+}
+void ADefaultGun::Melee()
 {
 }

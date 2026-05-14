@@ -7,10 +7,7 @@
 		{
 			"Name": "SpartaSurvival",
 			"Type": "Runtime",
-			"LoadingPhase": "Default",
-			"AdditionalDependencies": [
-				"Engine"
-			]
+			"LoadingPhase": "Default"
 		}
 	],
 	"Plugins": [
@@ -68,6 +65,10 @@
 				"Linux",
 				"Android"
 			]
+		},
+		{
+			"Name": "RigLogic",
+			"Enabled": true
 		}
 	]
 }

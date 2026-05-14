@@ -1,37 +1,122 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 #include "Shotgun.h"
-#include "MainCharacter.h"
+#include "../SpartaSurvivalCharacter.h"
 #include "DrawDebugHelpers.h"
-#include "UObject/ConstructorHelpers.h"
+#include "Camera/CameraComponent.h"
+#include "Animation/AnimInstance.h"
+#include "Animation/AnimMontage.h"
+#include "EnemyBase.h"
+#include "Engine/DamageEvents.h"
+#include "GameFramework/Controller.h"
+#include "Kismet/GameplayStatics.h"
+
 
 
 AShotgun::AShotgun()
 {
-	ZoomMultiplier = 2.f;
+	ZoomMultiplier = 1.2f;
 	ReloadDuration = 1.5f;
 	MaxAmmo = 8;
 	CurrentAmmo = MaxAmmo;
 	CanFire = true;
 
+	ShotgunRange = 1000.f;
+	PelletCount = 8;
+	SpreadAngle = 8.f;
+	DamagePerPellet = 10.f;
+
+	MeleeDuration = .8f;
+	MeleeRange = 150.f;
+
+	//mesh 적용하기 
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshAsset(
+		TEXT("/Game/GunMeshes/ShotgunPrototype.ShotgunPrototype")
+	);
+
+	if (MeshAsset.Succeeded())
+	{
+		GunMesh->SetStaticMesh(MeshAsset.Object);
+	}
+
+	GunMesh->SetRelativeScale3D(FVector(.38f, .38f, .38f));
+	GunMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GunMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
+	GunMesh->SetGenerateOverlapEvents(false);
+
+	MuzzlePoint->SetRelativeLocation(FVector(0.f, 90.f, 0.f));
+
+	//muzzleflash
+	MuzzleFlash = CreateDefaultSubobject<UBillboardComponent>(TEXT("MuzzleFlash"));
+	MuzzleFlash->SetupAttachment(MuzzlePoint);
+	MuzzleFlash->SetRelativeLocation(FVector::ZeroVector);
+	MuzzleFlash->SetRelativeRotation(FRotator::ZeroRotator);
+	MuzzleFlash->SetHiddenInGame(false);
+	MuzzleFlash->SetRelativeScale3D(FVector(3.f));
+	MuzzleFlash->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));
+
+	static ConstructorHelpers::FObjectFinder<UTexture2D> Flash01(
+		TEXT("/Game/GunMeshes/MF1.MF1")
+	);
+	static ConstructorHelpers::FObjectFinder<UTexture2D> Flash02(
+		TEXT("/Game/GunMeshes/MF2.MF2")
+	);
+	static ConstructorHelpers::FObjectFinder<UTexture2D> Flash03(
+		TEXT("/Game/GunMeshes/MF3.MF3")
+	);
+
+	if (Flash01.Succeeded()) MuzzleFlashTextures.Add(Flash01.Object);
+	if (Flash02.Succeeded()) MuzzleFlashTextures.Add(Flash02.Object);
+	if (Flash03.Succeeded()) MuzzleFlashTextures.Add(Flash03.Object);
 }
 
-//마지막으로 맞은 액터 반환
-AActor* AShotgun::GetHitActor() const 
+//캐릭터에게 장착
+void AShotgun::EquipToCharacter(ASpartaSurvivalCharacter* Character)
 {
-	return LastHitActor;
+	if (!Character || !Character->GetWeaponSocket() || !GripPoint || !SupportPoint || !GetRootComponent()) return;
+
+	CurrentCharacter = Character;
+	Character->SetEquippedGun(this);
+
+	// 먼저 샷건 Actor를 WeaponSocket에 붙임
+	AttachToComponent(
+		Character->GetWeaponSocket(),
+		FAttachmentTransformRules::SnapToTargetNotIncludingScale
+	);
+
+	// GripPoint 위치와 WeaponSocket 위치 차이 계산
+	FVector Delta =
+		Character->GetWeaponSocket()->GetComponentLocation()
+		- GripPoint->GetComponentLocation();
+
+	// 샷건 Actor 전체를 이동해서 GripPoint를 WeaponSocket 위치에 맞춤
+	AddActorWorldOffset(Delta);
+
 }
 
 //샷건 기본 로직 구현
 void AShotgun::Fire()
 {
+	UE_LOG(LogTemp, Warning, TEXT("Firning"));
 	if (CanFire && CurrentAmmo > 0)
 	{
 		if (!MuzzlePoint) return;
 		
 		CurrentAmmo--;
 
-		FVector StartPoint = MuzzlePoint->GetComponentLocation();
-		FVector StartDirection = MuzzlePoint->GetForwardVector();
+		if (FireSound)
+		{
+			UGameplayStatics::PlaySoundAtLocation(
+				this,
+				FireSound,
+				MuzzlePoint->GetComponentLocation()
+			);
+		}
+
+		UCameraComponent* CurrentCam = CurrentCharacter->GetFollowCamera(); 
+		if (!CurrentCam) return;
+
+		FVector StartPoint = CurrentCam->GetComponentLocation();
+		FVector StartDirection = CurrentCam->GetForwardVector();
 
 		FCollisionQueryParams CollisionParameters;
 		CollisionParameters.AddIgnoredActor(this); //자신은 충돌에서 제외
@@ -57,12 +142,29 @@ void AShotgun::Fire()
 				CollisionParameters
 			);
 
-			DrawDebugLine(GetWorld(), StartPoint, EndPoint, FColor::Red, false, 1.f, 0, 2.f);
+			DrawDebugLine(GetWorld(), MuzzlePoint->GetComponentLocation(), EndPoint, FColor::Red, false, 1.f, 0, 2.f);
 
 			if (bHit && HitResult.GetActor())
 			{
 				LastHitActor = HitResult.GetActor(); //Hit 액터 저장
 				UE_LOG(LogTemp, Warning, TEXT("Hit: %s"), *HitResult.GetActor()->GetName()); //충돌한 액터 이름 로그
+
+				AEnemyBase* HitEnemy = Cast<AEnemyBase>(LastHitActor);
+
+				//데미지 처리 총기 line
+				if (HitEnemy)
+				{
+					FPointDamageEvent PointDamageEvent;
+					PointDamageEvent.Damage = DamagePerPellet;
+					PointDamageEvent.HitInfo = HitResult;
+					PointDamageEvent.ShotDirection = ShotDirection;
+					PointDamageEvent.ShotDirection = ShotDirection;
+
+					AController* InstigatorController =
+						CurrentCharacter ? CurrentCharacter->GetController() : nullptr;
+
+					HitEnemy->TakeDamage(DamagePerPellet, PointDamageEvent, InstigatorController, this);
+				}
 			}
 			else
 			{
@@ -72,8 +174,28 @@ void AShotgun::Fire()
 			UE_LOG(LogTemp, Log, TEXT("Shotgun fired! Remaining ammo: %d"), CurrentAmmo);
 		}
 
+		//muzzle flash
+		if (MuzzleFlash && MuzzleFlashTextures.Num() > 0)
+		{
+			MuzzleFlash->SetSprite(MuzzleFlashTextures[MuzzleFlashIndex]);
 
+			MuzzleFlashIndex = (MuzzleFlashIndex + 1) % MuzzleFlashTextures.Num();
 
+			MuzzleFlash->SetHiddenInGame(false);
+
+			GetWorld()->GetTimerManager().SetTimer(
+				MuzzleFlashTimer,
+				[this]()
+				{
+					if (MuzzleFlash)
+					{
+						MuzzleFlash->SetHiddenInGame(true);
+					}
+				},
+				0.05f,
+				false
+			);
+		}
 	}
 	else
 	{
@@ -84,10 +206,31 @@ void AShotgun::Fire()
 //재장전
 void AShotgun::Reload()
 {
+	if (bIsReloading) return;
+
+	bIsReloading = true;
 	CanFire = false;
 
+	if (ReloadSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(
+			this,
+			ReloadSound,
+			GetActorLocation()
+		);
+	}
+
+	//ANIMATION 
+	UAnimInstance* AnimInstance = CurrentCharacter->GetMesh()->GetAnimInstance();
+	if (!AnimInstance)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Reload failed: AnimInstance NULL"));
+		return;
+	}
+
+	float PlayResult = AnimInstance->Montage_Play(ReloadMontage, 1.0f);
 	GetWorld()->GetTimerManager().SetTimer(
-		ReloadTimerHandle,
+		ReloadTimer,
 		this,
 		&AShotgun::EndReload,
 		ReloadDuration,
@@ -99,11 +242,58 @@ void AShotgun::EndReload()
 {
 	CurrentAmmo = MaxAmmo;
 	CanFire = true;
-
-	UE_LOG(LogTemp, Log, TEXT("Shotgun reloaded! Ammo reset to: %d"), CurrentAmmo);
+	bIsReloading = false;
+	UE_LOG(LogTemp, Warning, TEXT("Shotgun reloaded! Ammo reset to: %d"), CurrentAmmo);
 }
 
 void AShotgun::Zoom(bool bIsZoom)
 {
+	if (!CurrentCharacter || !CurrentCharacter->GetFollowCamera())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Zoom failed: CurrentCharacter or Camera is NULL"));
+		return;
+	}
 
+	if (bIsZoom)
+	{
+		CurrentCharacter->GetFollowCamera()->SetFieldOfView(55.f);
+		UE_LOG(LogTemp, Warning, TEXT("Zoom In"));
+	}
+	else
+	{
+		CurrentCharacter->GetFollowCamera()->SetFieldOfView(90.f);
+		UE_LOG(LogTemp, Warning, TEXT("Zoom Out"));
+	}
+}
+
+void AShotgun::Melee()
+{
+	if (bIsMeleeing) return;
+
+	bIsMeleeing = true;
+	CanFire = false;
+
+	//ANIMATION 
+	UAnimInstance* AnimInstance = CurrentCharacter->GetMesh()->GetAnimInstance();
+	if (!AnimInstance)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Reload failed: AnimInstance NULL"));
+		return;
+	}
+
+	float PlayResult = AnimInstance->Montage_Play(MeleeMontage, 1.0f);
+	GetWorld()->GetTimerManager().SetTimer(
+		MeleeTimer,
+		this,
+		&AShotgun::EndMelee,
+		MeleeDuration,
+		false
+	);
+}
+
+void AShotgun::EndMelee()
+{
+	bIsMeleeing = false;
+	CanFire = true;
+	UE_LOG(LogTemp, Warning, TEXT("Melee attack ended."));
 }

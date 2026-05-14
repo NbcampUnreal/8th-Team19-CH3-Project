@@ -8,7 +8,7 @@
 
 class UStaticMeshComponent;
 class USceneComponent;
-class AMainCharacter;
+class ASpartaSurvivalCharacter;
 
 UCLASS(Abstract)
 class SPARTASURVIVAL_API ADefaultGun : public AActor
@@ -23,19 +23,23 @@ public:
 	virtual void Fire();
 	virtual void Reload();
 	virtual void Zoom(bool bIsZoom);
-	virtual void EquipToCharacter(AMainCharacter* Character);
+	virtual void EquipToCharacter(ASpartaSurvivalCharacter* Character);
+	virtual void Melee();
 
 	//총기 정보
 	float ZoomMultiplier;
 	float CurrentFov;
 	float ReloadDuration;
+
+	//근접 공격 정보
+	float MeleeDuration;
+	float MeleeRange;
 	
 	int32 MaxAmmo;      // 최대 총알 수
 	int32 CurrentAmmo;  // 현재/남은 총알 수
 
 	bool CanFire;
-
-
+	
 protected:
 	//총기 블루프린트 컴포넌트
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gun")
@@ -44,7 +48,7 @@ protected:
 	USceneComponent* MuzzlePoint;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gun")
 	USceneComponent* GripPoint;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gun")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Gun")
 	USceneComponent* SupportPoint;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gun")

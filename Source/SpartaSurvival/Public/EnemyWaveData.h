@@ -11,6 +11,7 @@ struct FEnemySpawnInfo
     GENERATED_BODY()
 
     
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy")
     TSubclassOf<class AEnemyBase> EnemyClass;
 
@@ -23,6 +24,7 @@ struct FEnemySpawnInfo
 USTRUCT(BlueprintType)
 struct FEnemyWaveData : public FTableRowBase
 {
+
     GENERATED_BODY()
 
 public:

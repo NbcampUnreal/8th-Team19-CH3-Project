@@ -9,6 +9,7 @@
 UCLASS(minimalapi)
 class ASpartaSurvivalGameMode : public AGameModeBase
 {
+
 	GENERATED_BODY()
 
 public:
