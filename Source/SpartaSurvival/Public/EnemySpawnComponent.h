@@ -9,6 +9,7 @@
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class SPARTASURVIVAL_API UEnemySpawnComponent : public UActorComponent
 {
+
     GENERATED_BODY()
 
 public:

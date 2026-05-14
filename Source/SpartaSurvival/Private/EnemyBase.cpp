@@ -9,6 +9,7 @@
 
 AEnemyBase::AEnemyBase()
 {
+
     PrimaryActorTick.bCanEverTick = false;
 
     CurrentHP = MaxHP;
