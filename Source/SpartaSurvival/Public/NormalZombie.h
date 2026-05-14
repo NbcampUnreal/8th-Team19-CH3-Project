@@ -12,6 +12,7 @@
 UCLASS()
 class SPARTASURVIVAL_API ANormalZombie : public AEnemyBase
 {
+
 	GENERATED_BODY()
 	
 };

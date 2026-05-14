@@ -17,6 +17,7 @@ enum class EEnemyState : uint8
 UCLASS()
 class SPARTASURVIVAL_API AEnemyBase : public ACharacter
 {
+
     GENERATED_BODY()
 
 public:

@@ -6,6 +6,7 @@
 
 void AEnemyAIController::OnPossess(APawn* InPawn)
 {
+
     Super::OnPossess(InPawn);
    
     GetWorldTimerManager().SetTimer(ChaseTimerHandle, this, &AEnemyAIController::ChasePlayer, 0.1f, true);

@@ -38,9 +38,25 @@ void ASpartaSurvivalGameMode::BeginPlay()
 	
 	Super::BeginPlay();
 
+	//메인메뉴때 게임 시작 방지
+	FString CurrentLevelName = GetWorld()->GetMapName();
+	CurrentLevelName.RemoveFromStart(GetWorld()->StreamingLevelsPrefix);
+
+
+	if (CurrentLevelName.Equals(TEXT("MainMenuLevel"), ESearchCase::IgnoreCase))
+	{
+		UE_LOG(LogTemp, Error, TEXT("게임 시작 전!"));
+		return; 
+	}
+
+	UE_LOG(LogTemp, Error, TEXT("게임 시작!"));
 
 	if (EnemySpawnComp == nullptr)
+	
+
 	{
+
+
 		UE_LOG(LogTemp, Error, TEXT("심각: EnemySpawnComp가 생성되지 않았습니다!"));
 	}
 	else
@@ -68,11 +84,7 @@ void ASpartaSurvivalGameMode::BeginPlay()
 		EnemySpawnComp->StartWave(CurrentStage);
 	}
 
-	UE_LOG(LogTemp, Error, TEXT("게임 시작!"));
-	//메인 메뉴 위젯
-	//ShowMainMenu();
 
-	//위젯전시간 체크
 	GetWorld()->GetTimerManager().SetTimer(
 		MainTimerHandle,
 		this,
@@ -151,6 +163,9 @@ void ASpartaSurvivalGameMode::GameOver()
 //UGameplayStatics::SetGamePaused(GetWorld(), true);
 	
 }
+void ASpartaSurvivalGameMode::GameClear()
+{
+}
 //점수
 void ASpartaSurvivalGameMode::AddScore(int32 Amount)
 {
@@ -184,7 +199,6 @@ void ASpartaSurvivalGameMode::HandleMainTimerElapsed()
 {
 	AccumulatedSeconds += 1;
 
-	AddScore(10);
 
 	if (AccumulatedSeconds % 2 == 0)
 	{
@@ -260,4 +274,8 @@ void ASpartaSurvivalGameMode::SpawnBoss()
 {
 	// 아무 기능 없이 로그만 찍어서 호출 확인!
 	UE_LOG(LogTemp, Error, TEXT("보스 소환 함수가 정상적으로 호출되었습니다!"));
+}
+
+void ASpartaSurvivalGameMode::GameClear()
+{
 }
