@@ -24,6 +24,7 @@ struct FEnemySpawnInfo
 USTRUCT(BlueprintType)
 struct FEnemyWaveData : public FTableRowBase
 {
+
     GENERATED_BODY()
 
 public:
