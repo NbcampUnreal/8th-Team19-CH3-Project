@@ -9,8 +9,6 @@
 
 UEnemySpawnComponent::UEnemySpawnComponent()
 {
-
-
 	PrimaryComponentTick.bCanEverTick = false;
 
     static ConstructorHelpers::FObjectFinder<UDataTable> DataTableAsset(TEXT("/Script/Engine.DataTable'/Game/Enemy/DataTable/DT_EnemyWaveData.DT_EnemyWaveData'"));

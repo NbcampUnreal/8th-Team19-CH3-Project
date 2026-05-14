@@ -39,6 +39,7 @@ void ASpartaSurvivalGameMode::BeginPlay()
 	Super::BeginPlay();
 
 
+
 	if (EnemySpawnComp == nullptr)
 	{
 		UE_LOG(LogTemp, Error, TEXT("심각: EnemySpawnComp가 생성되지 않았습니다!"));
