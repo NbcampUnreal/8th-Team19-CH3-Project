@@ -2,6 +2,10 @@
 
 #pragma once
 
+#include "Blueprint/UserWidget.h"
+#include "Engine/StaticMeshActor.h"
+#include "Camera/CameraShakeBase.h"
+#include "Animation/AnimationAsset.h"
 #include "Sound/SoundBase.h"
 #include "Components/BillboardComponent.h"
 #include "Animation/AnimMontage.h"
@@ -11,7 +15,7 @@
 
 
 
-class EnemyBase; 
+class EnemyBase;
 class ASpartaSurvivalCharacter;
 class TimerManager;
 
@@ -58,19 +62,53 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
 	UAnimMontage* MeleeMontage;
 
-protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound")
 	USoundBase* FireSound;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound")
 	USoundBase* ReloadSound;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+	UAnimationAsset* GunReloadAnimation;
+
+	UPROPERTY(EditAnywhere, Category = "Camera")
+	TSubclassOf<UCameraShakeBase> FireCameraShake;
+
+	UPROPERTY(EditAnywhere, Category = "Shell")
+	UStaticMesh* ShellMesh;
+
+	UPROPERTY(EditAnywhere, Category = "Shell")
+	float ShellLifeTime = 3.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Shell")
+	USceneComponent* ShellSpawnPoint;
+
+	void SpawnShotgunShells();
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "BulletHit")
+	UMaterialInterface* BulletHitMaterial;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "BulletHit")
+	FVector BulletHitSize = FVector(8.f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "BulletHit")
+	float BulletHitLifeTime = 5.f;
+
+	UPROPERTY(EditAnywhere, Category = "UI")
+	TSubclassOf<UUserWidget> CrosshairWidgetClass;
+
+	UPROPERTY(EditAnywhere, Category = "UI")
+	UUserWidget* CrosshairWidget;
+
+	void ShowCrosshair();
+	void HideCrosshair();
+
 public:
 	AShotgun();
 
 	USceneComponent* GetGripPoint() const { return GripPoint; }
 	USceneComponent* GetSupportPoint() const { return SupportPoint; }
-	UStaticMeshComponent* GetGunMesh() const { return GunMesh; }
+	USkeletalMeshComponent* GetGunMesh() const { return GunMesh; }
 
 public:
 	virtual void Fire() override;

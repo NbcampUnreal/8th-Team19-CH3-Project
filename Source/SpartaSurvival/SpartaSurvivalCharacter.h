@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Camera/CameraComponent.h"
 #include "Logging/LogMacros.h"
 #include "SpartaSurvivalCharacter.generated.h"
 

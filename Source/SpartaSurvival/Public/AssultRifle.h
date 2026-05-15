@@ -5,6 +5,7 @@
 #include "Blueprint/UserWidget.h"
 #include "Engine/StaticMeshActor.h"
 #include "Camera/CameraShakeBase.h"
+#include "Camera/CameraComponent.h"
 #include "Animation/AnimationAsset.h"
 #include "Sound/SoundBase.h"
 #include "Components/BillboardComponent.h"
@@ -74,7 +75,7 @@ protected:
 	UStaticMesh* MagazineMesh;
 
 	UPROPERTY(EditAnywhere, Category = "Magazine")
-	float MagazineLifeTime = 3.0f;
+	float MagazineLifeTime = 5.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Magazine")
 	USceneComponent* MagazineSpawnPoint;

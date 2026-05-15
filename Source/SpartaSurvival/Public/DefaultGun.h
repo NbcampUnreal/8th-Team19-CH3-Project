@@ -6,7 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "DefaultGun.generated.h"
 
-class UStaticMeshComponent;
+class USkeletalMeshComponent;
 class USceneComponent;
 class ASpartaSurvivalCharacter;
 
@@ -52,7 +52,7 @@ protected:
 	USceneComponent* SupportPoint;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gun")
-	UStaticMeshComponent* GunMesh;
+	USkeletalMeshComponent* GunMesh;
 
 	ADefaultGun* EquippedGun;
 

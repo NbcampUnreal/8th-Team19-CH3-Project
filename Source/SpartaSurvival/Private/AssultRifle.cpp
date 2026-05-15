@@ -4,7 +4,6 @@
 #include "Camera/PlayerCameraManager.h"
 #include "../SpartaSurvivalCharacter.h"
 #include "DrawDebugHelpers.h"
-#include "Camera/CameraComponent.h"
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
 #include "EnemyBase.h"
@@ -24,14 +23,14 @@ AAssultRifle::AAssultRifle()
 
 	AssultRifleRange = 2000.f;
 	DamagePerBullet = 10.f;
-	SpreadAngle = .8;
+	SpreadAngle = 0.;
 
 	MeleeDuration = .8f;
 	MeleeRange = 150.f;
 
 	//mesh 적용하기 
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshAsset(
-		TEXT("/Game/GunMeshes/AssultRifleFinal.AssultRifleFinal")
+		TEXT("/Game/GunMeshes/AssultRifleMesh.AssultRifleMesh")
 	);
 
 	if (MeshAsset.Succeeded())
@@ -45,6 +44,10 @@ AAssultRifle::AAssultRifle()
 	GunMesh->SetGenerateOverlapEvents(false);
 
 	MuzzlePoint->SetRelativeLocation(FVector(0.f, 90.f, 0.f));
+	
+	//magazinePoint
+	MagazineSpawnPoint = CreateDefaultSubobject<USceneComponent>(TEXT("MagazinePoint"));
+	MagazineSpawnPoint->SetupAttachment(GunMesh);
 
 	//muzzleflash
 	MuzzleFlash = CreateDefaultSubobject<UBillboardComponent>(TEXT("MuzzleFlash"));
@@ -194,23 +197,33 @@ void AAssultRifle::Fire()
 			}
 		}
 
-		UCameraComponent* CurrentCam = CurrentCharacter->GetFollowCamera();
-		if (!CurrentCam) return;
-
-		FVector StartPoint = CurrentCam->GetComponentLocation();
-		FVector StartDirection = CurrentCam->GetForwardVector();
-
-		FCollisionQueryParams CollisionParameters;
-		CollisionParameters.AddIgnoredActor(this); //자신은 충돌에서 제외
-		CollisionParameters.AddIgnoredActor(GetOwner()); //소유자도 충돌에서 제외
 
 
-		FVector ShotDirection = FMath::VRandCone(
-			StartDirection,
-			FMath::DegreesToRadians(SpreadAngle)
+		APlayerController* PC = Cast<APlayerController>(CurrentCharacter->GetController());
+		if (!PC) return;
+
+		int32 ViewportX = 0;
+		int32 ViewportY = 0;
+		PC->GetViewportSize(ViewportX, ViewportY);
+
+		FVector StartPoint;
+		FVector ShotDirection;
+
+		bool bDeprojected = PC->DeprojectScreenPositionToWorld(
+			ViewportX * 0.5f,
+			ViewportY * 0.5f,
+			StartPoint,
+			ShotDirection
 		);
 
-		FVector EndPoint = StartPoint + ShotDirection * AssultRifleRange; // 발사될 방향 계산
+		if (!bDeprojected) return;
+
+		FVector EndPoint = StartPoint + ShotDirection * AssultRifleRange;
+		FCollisionQueryParams CollisionParameters;
+		CollisionParameters.AddIgnoredActor(this);
+		CollisionParameters.AddIgnoredActor(GetOwner());
+		CollisionParameters.AddIgnoredActor(CurrentCharacter);
+
 
 		FHitResult HitResult;
 

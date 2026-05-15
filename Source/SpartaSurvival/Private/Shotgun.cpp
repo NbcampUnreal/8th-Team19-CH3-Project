@@ -1,5 +1,7 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 #include "Shotgun.h"
+#include "GameFramework/PlayerController.h"
+#include "Camera/PlayerCameraManager.h"
 #include "../SpartaSurvivalCharacter.h"
 #include "DrawDebugHelpers.h"
 #include "Camera/CameraComponent.h"
@@ -29,13 +31,13 @@ AShotgun::AShotgun()
 	MeleeRange = 150.f;
 
 	//mesh 적용하기 
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshAsset(
-		TEXT("/Game/GunMeshes/ShotgunPrototype.ShotgunPrototype")
+	static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshAsset(
+		TEXT("/Game/GunMeshes/ShotgunFinal.ShotgunFinal")
 	);
 
 	if (MeshAsset.Succeeded())
 	{
-		GunMesh->SetStaticMesh(MeshAsset.Object);
+		GunMesh->SetSkeletalMesh(MeshAsset.Object);
 	}
 
 	GunMesh->SetRelativeScale3D(FVector(.38f, .38f, .38f));
@@ -67,12 +69,50 @@ AShotgun::AShotgun()
 	if (Flash01.Succeeded()) MuzzleFlashTextures.Add(Flash01.Object);
 	if (Flash02.Succeeded()) MuzzleFlashTextures.Add(Flash02.Object);
 	if (Flash03.Succeeded()) MuzzleFlashTextures.Add(Flash03.Object);
+
+	//reload animation
+	static ConstructorHelpers::FObjectFinder<UAnimationAsset> ReloadAnimAsset(
+		TEXT("/Game/GunMeshes/ShotgunFinal_Anim.ShotgunFinal_Anim")
+	);
+
+	if (ReloadAnimAsset.Succeeded())
+	{
+		GunReloadAnimation = ReloadAnimAsset.Object;
+	}
+
+	//shell spawn point
+	ShellSpawnPoint = CreateDefaultSubobject<USceneComponent>(TEXT("ShellSpawnPoint"));
+	ShellSpawnPoint->SetupAttachment(GunMesh);
+}
+void AShotgun::ShowCrosshair()
+{
+	if (CrosshairWidget || !CrosshairWidgetClass || !CurrentCharacter) return;
+
+	APlayerController* PC =
+		Cast<APlayerController>(CurrentCharacter->GetController());
+
+	if (!PC || !PC->IsLocalController()) return;
+
+	CrosshairWidget = CreateWidget<UUserWidget>(PC, CrosshairWidgetClass);
+
+	if (CrosshairWidget)
+	{
+		CrosshairWidget->AddToViewport();
+	}
 }
 
+void AShotgun::HideCrosshair()
+{
+	if (CrosshairWidget)
+	{
+		CrosshairWidget->RemoveFromParent();
+		CrosshairWidget = nullptr;
+	}
+}
 //캐릭터에게 장착
 void AShotgun::EquipToCharacter(ASpartaSurvivalCharacter* Character)
 {
-	if (!Character || !Character->GetWeaponSocket() || !GripPoint || !SupportPoint || !GetRootComponent()) return;
+	if (!Character || !Character->GetWeaponSocket() || !GripPoint || !GetRootComponent()) return;
 
 	CurrentCharacter = Character;
 	Character->SetEquippedGun(this);
@@ -91,7 +131,71 @@ void AShotgun::EquipToCharacter(ASpartaSurvivalCharacter* Character)
 	// 샷건 Actor 전체를 이동해서 GripPoint를 WeaponSocket 위치에 맞춤
 	AddActorWorldOffset(Delta);
 
+	ShowCrosshair();
+
 }
+
+void AShotgun::SpawnShotgunShells()
+{
+	if (!ShellMesh || !ShellSpawnPoint) return;
+
+	for (int32 i = 0; i < 2; i++)
+	{
+		FVector SpawnLoc =
+			ShellSpawnPoint->GetComponentLocation()
+			+ GetActorRightVector() * (15.f + i * 8.f)
+			+ GetActorUpVector() * 5.f;
+
+		FRotator SpawnRot = FRotator::ZeroRotator;
+
+		//즉 월드에 실제로 생성됩니다, 보이려면 생성 후에 Static Mesh를 넣어야 합니다.
+
+		AStaticMeshActor* ShellActor =
+			GetWorld()->SpawnActor<AStaticMeshActor>(
+				AStaticMeshActor::StaticClass(),
+				SpawnLoc,
+				SpawnRot
+			);
+
+		if (!ShellActor) return;
+		//component 
+		UStaticMeshComponent* ShellComp = ShellActor->GetStaticMeshComponent();
+
+		//staitc to movable
+		ShellComp->SetMobility(EComponentMobility::Movable);
+		ShellComp->SetStaticMesh(ShellMesh);
+		ShellComp->SetWorldScale3D(FVector(0.0004f));
+
+		//no collision
+		ShellComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		ShellComp->SetCollisionObjectType(ECC_PhysicsBody);
+
+		// 4. 플레이어랑은 안 부딪히게, 바닥은 부딪히게
+		ShellComp->SetCollisionResponseToAllChannels(ECR_Ignore);
+		ShellComp->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
+		ShellComp->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Block);
+
+		//무게 가볍게
+		ShellComp->SetMassOverrideInKg(NAME_None, 0.02f, true);
+
+		//gravity physics
+		ShellComp->SetSimulatePhysics(true);
+		ShellComp->SetEnableGravity(true);
+
+		//살짝 튀어나가게
+		FVector Impulse =
+			GetActorRightVector() * 40.f
+			+ GetActorUpVector() * 30.f
+			- GetActorForwardVector() * 10.f;
+
+		ShellComp->AddImpulse(Impulse, NAME_None, true);
+
+		// delete after few secs
+		ShellActor->SetLifeSpan(ShellLifeTime);
+
+	}
+}
+
 
 //샷건 기본 로직 구현
 void AShotgun::Fire()
@@ -100,7 +204,7 @@ void AShotgun::Fire()
 	if (CanFire && CurrentAmmo > 0)
 	{
 		if (!MuzzlePoint) return;
-		
+
 		CurrentAmmo--;
 
 		if (FireSound)
@@ -112,7 +216,17 @@ void AShotgun::Fire()
 			);
 		}
 
-		UCameraComponent* CurrentCam = CurrentCharacter->GetFollowCamera(); 
+		if (CurrentCharacter && FireCameraShake)
+		{
+			APlayerController* PC = Cast<APlayerController>(CurrentCharacter->GetController());
+
+			if (PC && PC->PlayerCameraManager)
+			{
+				PC->PlayerCameraManager->StartCameraShake(FireCameraShake, 10.f);
+			}
+		}
+
+		UCameraComponent* CurrentCam = CurrentCharacter->GetFollowCamera();
 		if (!CurrentCam) return;
 
 		FVector StartPoint = CurrentCam->GetComponentLocation();
@@ -148,6 +262,25 @@ void AShotgun::Fire()
 			{
 				LastHitActor = HitResult.GetActor(); //Hit 액터 저장
 				UE_LOG(LogTemp, Warning, TEXT("Hit: %s"), *HitResult.GetActor()->GetName()); //충돌한 액터 이름 로그
+
+				//총알 구멍
+				if (BulletHitMaterial)
+				{
+					FVector DecalLocation =
+						HitResult.ImpactPoint + HitResult.ImpactNormal * 1.f;
+
+					FRotator DecalRotation =
+						HitResult.ImpactNormal.Rotation();
+
+					UGameplayStatics::SpawnDecalAtLocation(
+						GetWorld(),
+						BulletHitMaterial,
+						BulletHitSize,
+						DecalLocation,
+						DecalRotation,
+						BulletHitLifeTime
+					);
+				}
 
 				AEnemyBase* HitEnemy = Cast<AEnemyBase>(LastHitActor);
 
@@ -206,29 +339,38 @@ void AShotgun::Fire()
 //재장전
 void AShotgun::Reload()
 {
-	if (bIsReloading) return;
+	if (bIsReloading || CurrentAmmo == MaxAmmo) return;
 
 	bIsReloading = true;
 	CanFire = false;
 
+	if (CurrentCharacter)
+	{
+		CurrentCharacter->SetBlockLeftHandIK(true);
+	}
+
+	if (GunMesh && GunReloadAnimation)
+	{
+		GunMesh->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+		GunMesh->PlayAnimation(GunReloadAnimation, false);
+	}
+
+	//shells dropped
+	SpawnShotgunShells();
+
 	if (ReloadSound)
 	{
-		UGameplayStatics::PlaySoundAtLocation(
-			this,
-			ReloadSound,
-			GetActorLocation()
-		);
+		UGameplayStatics::PlaySoundAtLocation(this, ReloadSound, GetActorLocation());
 	}
 
-	//ANIMATION 
-	UAnimInstance* AnimInstance = CurrentCharacter->GetMesh()->GetAnimInstance();
-	if (!AnimInstance)
+	if (CurrentCharacter && CurrentCharacter->GetMesh())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Reload failed: AnimInstance NULL"));
-		return;
+		if (UAnimInstance* AnimInstance = CurrentCharacter->GetMesh()->GetAnimInstance())
+		{
+			AnimInstance->Montage_Play(ReloadMontage, 1.0f);
+		}
 	}
 
-	float PlayResult = AnimInstance->Montage_Play(ReloadMontage, 1.0f);
 	GetWorld()->GetTimerManager().SetTimer(
 		ReloadTimer,
 		this,
@@ -243,6 +385,13 @@ void AShotgun::EndReload()
 	CurrentAmmo = MaxAmmo;
 	CanFire = true;
 	bIsReloading = false;
+
+	if (CurrentCharacter)
+	{
+		CurrentCharacter->SetBlockLeftHandIK(false);
+	}
+
+
 	UE_LOG(LogTemp, Warning, TEXT("Shotgun reloaded! Ammo reset to: %d"), CurrentAmmo);
 }
 
