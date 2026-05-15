@@ -6,7 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "DefaultGun.generated.h"
 
-class USkeletalMeshComponent;
+class UStaticMeshComponent;
 class USceneComponent;
 class ASpartaSurvivalCharacter;
 
@@ -50,15 +50,11 @@ protected:
 	USceneComponent* GripPoint;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Gun")
 	USceneComponent* SupportPoint;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Gun")
-	USceneComponent* SupportPointMoving;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Gun")
-	USkeletalMeshComponent* GunMesh;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gun")
+	UStaticMeshComponent* GunMesh;
 
 	ADefaultGun* EquippedGun;
 
-public:
-	virtual 	USceneComponent* GetSupportPointMoving() { return SupportPointMoving; }
 
 };

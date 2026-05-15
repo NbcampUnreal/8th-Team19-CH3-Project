@@ -9,6 +9,7 @@
 UCLASS(minimalapi)
 class ASpartaSurvivalGameMode : public AGameModeBase
 {
+
 	GENERATED_BODY()
 
 public:
@@ -20,6 +21,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "GameSystem")
 	void GameOver();
+
+	UFUNCTION(BlueprintCallable, Category = "GameSystem")
+	void GameClear();
 
 	//점수
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GameData")

@@ -17,7 +17,6 @@ struct FInputActionValue;
 class USceneComponent;
 class ADefaultGun;
 class AShotgun;
-class AAssultRifle;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
@@ -298,13 +297,8 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Category = "IK")
 	bool bUseLeftHandIK = false;
-	void SetBlockLeftHandIK(bool bBlock);
-
-	bool bBlockLeftHandIK = false;
 
 public:
-	void SetIsMoving(bool bMove);
-
 	void SetEquippedGun(ADefaultGun* NewGun);
 
 	USceneComponent* GetWeaponSocket() const { return WeaponSocket; }
@@ -312,16 +306,12 @@ public:
 
 	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "Gun")
 	AShotgun* StartingShotgun = nullptr;
-	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "Gun")
-	AAssultRifle* StartingAssultRifle = nullptr;
+
 
 protected:
 	//샷건 bp 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gun")
 	TSubclassOf<AShotgun> ShotgunBP;
-	//소총 bp
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gun")
-	TSubclassOf<AAssultRifle> AssultRifleBP;
 
 	//현재 장착된 총기 정보
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")
@@ -344,7 +334,7 @@ protected:
 private:
 	//bool bWeaponMovePose = false;
 
-	FRotator WeaponBaseRot = FRotator(0.f, 180.f, 0.f);
+	FRotator WeaponBaseRot = FRotator(-5.f, 170.f, 0.f);
 	//FRotator WeaponMoveOffsetRot = FRotator(13.f, -30.f, 50.f);
 	//FRotator WeaponJumpOffsetRot = FRotator(10.f, -22.f, 50.f);
 

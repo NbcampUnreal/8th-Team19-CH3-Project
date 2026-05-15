@@ -3,11 +3,13 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "EnemyWaveData.h"
+#include "EnemyBase.h"
 #include "EnemySpawnComponent.generated.h"
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class SPARTASURVIVAL_API UEnemySpawnComponent : public UActorComponent
 {
+
     GENERATED_BODY()
 
 public:
@@ -17,7 +19,7 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawning")
     class UDataTable* WaveDataTable;
 
-    
+
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Spawning")
     FEnemyWaveData CurrentWaveInfo;
 
@@ -31,5 +33,7 @@ public:
 
 private:
     FTimerHandle SpawnTimerHandle;
+    TArray<TSubclassOf<AEnemyBase>> WaveSpawnQueue;
+    FVector LastSpawnCenter;
 
 };
