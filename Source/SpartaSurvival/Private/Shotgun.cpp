@@ -79,6 +79,10 @@ AShotgun::AShotgun()
 	{
 		GunReloadAnimation = ReloadAnimAsset.Object;
 	}
+
+	//shell spawn point
+	ShellSpawnPoint = CreateDefaultSubobject<USceneComponent>(TEXT("ShellSpawnPoint"));
+	ShellSpawnPoint->SetupAttachment(GunMesh);
 }
 
 //캐릭터에게 장착
@@ -99,11 +103,73 @@ void AShotgun::EquipToCharacter(ASpartaSurvivalCharacter* Character)
 	FVector Delta =
 		Character->GetWeaponSocket()->GetComponentLocation()
 		- GripPoint->GetComponentLocation();
-
+	
 	// 샷건 Actor 전체를 이동해서 GripPoint를 WeaponSocket 위치에 맞춤
 	AddActorWorldOffset(Delta);
 
 }
+
+void AShotgun::SpawnShotgunShells()
+{
+	if (!ShellMesh || !ShellSpawnPoint) return;
+
+	for (int32 i = 0; i < 2; i++)
+	{
+		FVector SpawnLoc =
+			ShellSpawnPoint->GetComponentLocation()
+			+ GetActorRightVector() * (15.f + i * 8.f)
+			+ GetActorUpVector() * 5.f;
+
+		FRotator SpawnRot = FRotator::ZeroRotator;
+
+		//즉 월드에 실제로 생성됩니다, 보이려면 생성 후에 Static Mesh를 넣어야 합니다.
+
+		AStaticMeshActor* ShellActor =
+			GetWorld()->SpawnActor<AStaticMeshActor>(
+				AStaticMeshActor::StaticClass(),
+				SpawnLoc,
+				SpawnRot
+			);
+
+		if (!ShellActor) return;
+		//component 
+		UStaticMeshComponent* ShellComp = ShellActor->GetStaticMeshComponent();
+		
+		//staitc to movable
+		ShellComp->SetMobility(EComponentMobility::Movable);
+		ShellComp->SetStaticMesh(ShellMesh);
+		ShellComp->SetWorldScale3D(FVector(0.0004f));
+
+		//no collision
+		ShellComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		ShellComp->SetCollisionObjectType(ECC_PhysicsBody);
+
+		// 4. 플레이어랑은 안 부딪히게, 바닥은 부딪히게
+		ShellComp->SetCollisionResponseToAllChannels(ECR_Ignore);
+		ShellComp->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
+		ShellComp->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Block);
+
+		//무게 가볍게
+		ShellComp->SetMassOverrideInKg(NAME_None, 0.02f, true);
+
+		//gravity physics
+		ShellComp->SetSimulatePhysics(true);
+		ShellComp->SetEnableGravity(true);
+
+		//살짝 튀어나가게
+		FVector Impulse =
+			GetActorRightVector() * 40.f
+			+ GetActorUpVector() * 30.f
+			- GetActorForwardVector() * 10.f;
+		 
+		ShellComp->AddImpulse(Impulse, NAME_None, true);
+
+		// delete after few secs
+		ShellActor->SetLifeSpan(ShellLifeTime);
+
+	}
+}
+
 
 //샷건 기본 로직 구현
 void AShotgun::Fire()
@@ -170,6 +236,25 @@ void AShotgun::Fire()
 			{
 				LastHitActor = HitResult.GetActor(); //Hit 액터 저장
 				UE_LOG(LogTemp, Warning, TEXT("Hit: %s"), *HitResult.GetActor()->GetName()); //충돌한 액터 이름 로그
+
+				//총알 구멍
+				if (BulletHitMaterial)
+				{
+					FVector DecalLocation =
+						HitResult.ImpactPoint + HitResult.ImpactNormal * 1.f;
+					
+					FRotator DecalRotation =
+						HitResult.ImpactNormal.Rotation();
+
+					UGameplayStatics::SpawnDecalAtLocation(
+						GetWorld(),
+						BulletHitMaterial,
+						BulletHitSize,
+						DecalLocation,
+						DecalRotation,
+						BulletHitLifeTime
+					);
+				}
 
 				AEnemyBase* HitEnemy = Cast<AEnemyBase>(LastHitActor);
 
@@ -243,6 +328,9 @@ void AShotgun::Reload()
 		GunMesh->SetAnimationMode(EAnimationMode::AnimationSingleNode);
 		GunMesh->PlayAnimation(GunReloadAnimation, false);
 	}
+
+	//shells dropped
+	SpawnShotgunShells();
 
 	if (ReloadSound)
 	{

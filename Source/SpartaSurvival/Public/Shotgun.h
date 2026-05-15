@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "Engine/StaticMeshActor.h"
 #include "Camera/CameraShakeBase.h"
 #include "Animation/AnimationAsset.h"
 #include "Sound/SoundBase.h"
@@ -71,6 +72,26 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Camera")
 	TSubclassOf<UCameraShakeBase> FireCameraShake;
+
+	UPROPERTY(EditAnywhere, Category="Shell")
+	UStaticMesh* ShellMesh;
+
+	UPROPERTY(EditAnywhere, Category="Shell")
+	float ShellLifeTime = 3.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Shell")
+	USceneComponent* ShellSpawnPoint;
+
+	void SpawnShotgunShells();
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="BulletHit")
+	UMaterialInterface* BulletHitMaterial;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "BulletHit")
+	FVector BulletHitSize = FVector(8.f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "BulletHit")
+	float BulletHitLifeTime = 5.f;
 
 public:
 	AShotgun();
