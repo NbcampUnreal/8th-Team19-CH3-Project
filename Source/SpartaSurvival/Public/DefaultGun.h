@@ -58,5 +58,7 @@ protected:
 
 	ADefaultGun* EquippedGun;
 
+public:
+	virtual 	USceneComponent* GetSupportPointMoving() { return SupportPointMoving; }
 
 };

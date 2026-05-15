@@ -16,6 +16,7 @@
 #include "Components/SceneComponent.h"
 #include "DefaultGun.h"
 #include "Shotgun.h"
+#include "AssultRifle.h"
 #include "UObject/ConstructorHelpers.h"
 
 
@@ -76,7 +77,7 @@ ASpartaSurvivalCharacter::ASpartaSurvivalCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false; // 붐 기준으로 고정, 별도 회전 없음
 
-	//총기 관련 // shotgunbp 알려주기 
+	//총기 관련 shotgunbp 알려주기 
 	static ConstructorHelpers::FClassFinder<AShotgun> ShotgunClass(
 		TEXT("/Game/Blueprints/BP_Shotgun")
 	);
@@ -85,6 +86,17 @@ ASpartaSurvivalCharacter::ASpartaSurvivalCharacter()
 	{
 		ShotgunBP = ShotgunClass.Class;
 	}
+
+	//총기 관련 assultriflebp 알려주기 
+	static ConstructorHelpers::FClassFinder<AAssultRifle> AssultRifleClass(
+		TEXT("/Game/Blueprints/BP_AssultRifle")
+	);
+
+	if (AssultRifleClass.Succeeded())
+	{
+		AssultRifleBP = AssultRifleClass.Class;
+	}
+
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -96,7 +108,7 @@ void ASpartaSurvivalCharacter::BeginPlay()
 
 	// ── 앉기 캡슐 크기를 CharacterMovement에 주입 ─────────────────
 	// 언리얼 내장 Crouch()는 CharacterMovement->CrouchedHalfHeight 값을 기준으로
-	// 캡슐을 자동 조정합니다. UPROPERTY 값을 여기서 덮어써 커스텀 크기가 적용되도록 합니다.
+	// 캡슐을 자동 조정합니다. UPROPERTY 값을 여기서 덮어써 커스텀 크기가 적용되도s록 합니다.
 	if (UCharacterMovementComponent* MovComp = GetCharacterMovement())
 	{
 		MovComp->CrouchedHalfHeight = CrouchCapsuleHalfHeight;
@@ -106,26 +118,28 @@ void ASpartaSurvivalCharacter::BeginPlay()
 	AdjustCapsuleSize();
 	ApplyMovementSpeed();
 
-	if (!ShotgunBP)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("ShotgunBP is null."));
-		return;
-	}
+	if (!AssultRifleBP) return;
 
 	FActorSpawnParameters Params;
 	Params.Owner = this;
 	Params.Instigator = this;
 
-	AShotgun* SpawnedShotgun = GetWorld()->SpawnActor<AShotgun>(
-		ShotgunBP,
+	//AShotgun* SpawnedShotgun = GetWorld()->SpawnActor<AShotgun>(
+	//	ShotgunBP,
+	//	GetActorLocation(),
+	//	GetActorRotation(),
+	//	Params
+	//);
+
+	AAssultRifle* SpawnedAssultRifle = GetWorld()->SpawnActor<AAssultRifle>(
+		AssultRifleBP,
 		GetActorLocation(),
 		GetActorRotation(),
 		Params
 	);
 
-	SpawnedShotgun->EquipToCharacter(this);
-
-
+	//SpawnedShotgun->EquipToCharacter(this);
+	SpawnedAssultRifle->EquipToCharacter(this);
 }
 
 void ASpartaSurvivalCharacter::Tick(float DeltaTime)
@@ -163,13 +177,13 @@ void ASpartaSurvivalCharacter::Tick(float DeltaTime)
 	//}
 
 	//왼손
-	if (AShotgun* Shotgun = Cast<AShotgun>(EquippedGun))
+	if (AAssultRifle* AssultRifle = Cast<AAssultRifle>(EquippedGun))
 	{
 		if (bIsMoving)
 		{
-			if (Shotgun->GetSupportPointMoving() && !bBlockLeftHandIK)
+			if (AssultRifle->GetSupportPointMoving() && !bBlockLeftHandIK)
 			{
-				FVector WorldLoc = Shotgun->GetSupportPointMoving()->GetComponentLocation();
+				FVector WorldLoc = AssultRifle->GetSupportPointMoving()->GetComponentLocation();
 
 				LeftHandIKLocation =
 					GetMesh()->GetComponentTransform().InverseTransformPosition(WorldLoc);
@@ -183,9 +197,9 @@ void ASpartaSurvivalCharacter::Tick(float DeltaTime)
 		}
 		else if (!bIsMoving)
 		{
-			if (Shotgun->GetSupportPoint() && !bBlockLeftHandIK)
+			if (AssultRifle->GetSupportPoint() && !bBlockLeftHandIK)
 			{
-				FVector WorldLoc = Shotgun->GetSupportPoint()->GetComponentLocation();
+				FVector WorldLoc = AssultRifle->GetSupportPoint()->GetComponentLocation();
 
 				LeftHandIKLocation =
 					GetMesh()->GetComponentTransform().InverseTransformPosition(WorldLoc);

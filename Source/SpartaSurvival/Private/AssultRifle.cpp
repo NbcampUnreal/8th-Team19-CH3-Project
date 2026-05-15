@@ -1,5 +1,5 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
-#include "Shotgun.h"
+#include "AssultRifle.h"
 #include "GameFramework/PlayerController.h"
 #include "Camera/PlayerCameraManager.h"
 #include "../SpartaSurvivalCharacter.h"
@@ -14,25 +14,24 @@
 
 
 
-AShotgun::AShotgun()
+AAssultRifle::AAssultRifle()
 {
-	ZoomMultiplier = 1.2f;
+	ZoomMultiplier = 1.4f;
 	ReloadDuration = 1.5f;
-	MaxAmmo = 8;
+	MaxAmmo = 32;
 	CurrentAmmo = MaxAmmo;
 	CanFire = true;
 
-	ShotgunRange = 1000.f;
-	PelletCount = 8;
-	SpreadAngle = 8.f;
-	DamagePerPellet = 10.f;
+	AssultRifleRange = 2000.f;
+	DamagePerBullet = 10.f;
+	SpreadAngle = .8;
 
 	MeleeDuration = .8f;
 	MeleeRange = 150.f;
 
 	//mesh 적용하기 
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshAsset(
-		TEXT("/Game/GunMeshes/ShotgunFinal.ShotgunFinal")
+		TEXT("/Game/GunMeshes/AssultRifleFinal.AssultRifleFinal")
 	);
 
 	if (MeshAsset.Succeeded())
@@ -40,7 +39,7 @@ AShotgun::AShotgun()
 		GunMesh->SetSkeletalMesh(MeshAsset.Object);
 	}
 
-	GunMesh->SetRelativeScale3D(FVector(.38f, .38f, .38f));
+	GunMesh->SetRelativeScale3D(FVector(1.1f));
 	GunMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	GunMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
 	GunMesh->SetGenerateOverlapEvents(false);
@@ -69,22 +68,8 @@ AShotgun::AShotgun()
 	if (Flash01.Succeeded()) MuzzleFlashTextures.Add(Flash01.Object);
 	if (Flash02.Succeeded()) MuzzleFlashTextures.Add(Flash02.Object);
 	if (Flash03.Succeeded()) MuzzleFlashTextures.Add(Flash03.Object);
-
-	//reload animation
-	static ConstructorHelpers::FObjectFinder<UAnimationAsset> ReloadAnimAsset(
-		TEXT("/Game/GunMeshes/ShotgunFinal_Anim.ShotgunFinal_Anim")
-	);
-
-	if (ReloadAnimAsset.Succeeded())
-	{
-		GunReloadAnimation = ReloadAnimAsset.Object;
-	}
-
-	//shell spawn point
-	ShellSpawnPoint = CreateDefaultSubobject<USceneComponent>(TEXT("ShellSpawnPoint"));
-	ShellSpawnPoint->SetupAttachment(GunMesh);
 }
-void AShotgun::ShowCrosshair()
+void AAssultRifle::ShowCrosshair()
 {
 	if (CrosshairWidget || !CrosshairWidgetClass || !CurrentCharacter) return;
 
@@ -101,7 +86,7 @@ void AShotgun::ShowCrosshair()
 	}
 }
 
-void AShotgun::HideCrosshair()
+void AAssultRifle::HideCrosshair()
 {
 	if (CrosshairWidget)
 	{
@@ -109,8 +94,52 @@ void AShotgun::HideCrosshair()
 		CrosshairWidget = nullptr;
 	}
 }
+void AAssultRifle::SpawnMagazine()
+{
+	if (!MagazineMesh || !MagazineSpawnPoint) return;
+
+	CurrentMagazineActor = GetWorld()->SpawnActor<AStaticMeshActor>(
+		AStaticMeshActor::StaticClass(),
+		MagazineSpawnPoint->GetComponentTransform()
+	);
+
+	if (!CurrentMagazineActor) return;
+
+	UStaticMeshComponent* MagazineComp =
+		CurrentMagazineActor->GetStaticMeshComponent();
+
+	MagazineComp->SetMobility(EComponentMobility::Movable);
+	MagazineComp->SetStaticMesh(MagazineMesh);
+	MagazineComp->SetSimulatePhysics(false);
+	MagazineComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	CurrentMagazineActor->AttachToComponent(
+		MagazineSpawnPoint,
+		FAttachmentTransformRules::SnapToTargetNotIncludingScale
+	);
+}
+void AAssultRifle::DropMagazine()
+{
+	if (!CurrentMagazineActor) return;
+
+	AStaticMeshActor* DroppedMagazine = CurrentMagazineActor;
+	CurrentMagazineActor = nullptr;
+
+	DroppedMagazine->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+
+	UStaticMeshComponent* MagComp =
+		DroppedMagazine->GetStaticMeshComponent();
+
+	MagComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	MagComp->SetCollisionResponseToAllChannels(ECR_Block);
+	MagComp->SetSimulatePhysics(true);
+
+	MagComp->AddImpulse(-GetActorRightVector() * 200.f, NAME_None, true);
+
+	DroppedMagazine->SetLifeSpan(3.0f);
+}
 //캐릭터에게 장착
-void AShotgun::EquipToCharacter(ASpartaSurvivalCharacter* Character)
+void AAssultRifle::EquipToCharacter(ASpartaSurvivalCharacter* Character)
 {
 	if (!Character || !Character->GetWeaponSocket() || !GripPoint || !GetRootComponent()) return;
 
@@ -127,84 +156,23 @@ void AShotgun::EquipToCharacter(ASpartaSurvivalCharacter* Character)
 	FVector Delta =
 		Character->GetWeaponSocket()->GetComponentLocation()
 		- GripPoint->GetComponentLocation();
-	
+
 	// 샷건 Actor 전체를 이동해서 GripPoint를 WeaponSocket 위치에 맞춤
 	AddActorWorldOffset(Delta);
 
 	ShowCrosshair();
+	SpawnMagazine();
 
 }
 
-void AShotgun::SpawnShotgunShells()
-{
-	if (!ShellMesh || !ShellSpawnPoint) return;
-
-	for (int32 i = 0; i < 2; i++)
-	{
-		FVector SpawnLoc =
-			ShellSpawnPoint->GetComponentLocation()
-			+ GetActorRightVector() * (15.f + i * 8.f)
-			+ GetActorUpVector() * 5.f;
-
-		FRotator SpawnRot = FRotator::ZeroRotator;
-
-		//즉 월드에 실제로 생성됩니다, 보이려면 생성 후에 Static Mesh를 넣어야 합니다.
-
-		AStaticMeshActor* ShellActor =
-			GetWorld()->SpawnActor<AStaticMeshActor>(
-				AStaticMeshActor::StaticClass(),
-				SpawnLoc,
-				SpawnRot
-			);
-
-		if (!ShellActor) return;
-		//component 
-		UStaticMeshComponent* ShellComp = ShellActor->GetStaticMeshComponent();
-		
-		//staitc to movable
-		ShellComp->SetMobility(EComponentMobility::Movable);
-		ShellComp->SetStaticMesh(ShellMesh);
-		ShellComp->SetWorldScale3D(FVector(0.0004f));
-
-		//no collision
-		ShellComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-		ShellComp->SetCollisionObjectType(ECC_PhysicsBody);
-
-		// 4. 플레이어랑은 안 부딪히게, 바닥은 부딪히게
-		ShellComp->SetCollisionResponseToAllChannels(ECR_Ignore);
-		ShellComp->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
-		ShellComp->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Block);
-
-		//무게 가볍게
-		ShellComp->SetMassOverrideInKg(NAME_None, 0.02f, true);
-
-		//gravity physics
-		ShellComp->SetSimulatePhysics(true);
-		ShellComp->SetEnableGravity(true);
-
-		//살짝 튀어나가게
-		FVector Impulse =
-			GetActorRightVector() * 40.f
-			+ GetActorUpVector() * 30.f
-			- GetActorForwardVector() * 10.f;
-		 
-		ShellComp->AddImpulse(Impulse, NAME_None, true);
-
-		// delete after few secs
-		ShellActor->SetLifeSpan(ShellLifeTime);
-
-	}
-}
-
-
-//샷건 기본 로직 구현
-void AShotgun::Fire()
+//assult rifle
+void AAssultRifle::Fire()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Firning"));
 	if (CanFire && CurrentAmmo > 0)
 	{
 		if (!MuzzlePoint) return;
-		
+
 		CurrentAmmo--;
 
 		if (FireSound)
@@ -226,7 +194,7 @@ void AShotgun::Fire()
 			}
 		}
 
-		UCameraComponent* CurrentCam = CurrentCharacter->GetFollowCamera(); 
+		UCameraComponent* CurrentCam = CurrentCharacter->GetFollowCamera();
 		if (!CurrentCam) return;
 
 		FVector StartPoint = CurrentCam->GetComponentLocation();
@@ -237,75 +205,72 @@ void AShotgun::Fire()
 		CollisionParameters.AddIgnoredActor(GetOwner()); //소유자도 충돌에서 제외
 
 
-		for (int32 i = 0; i < PelletCount; i++)
+		FVector ShotDirection = FMath::VRandCone(
+			StartDirection,
+			FMath::DegreesToRadians(SpreadAngle)
+		);
+
+		FVector EndPoint = StartPoint + ShotDirection * AssultRifleRange; // 발사될 방향 계산
+
+		FHitResult HitResult;
+
+		bool bHit = GetWorld()->LineTraceSingleByChannel( // 맞으면 HitResult 안에 충돌 정보가 저장
+			HitResult,
+			StartPoint,
+			EndPoint,
+			ECC_Visibility,
+			CollisionParameters
+		);
+
+		DrawDebugLine(GetWorld(), MuzzlePoint->GetComponentLocation(), EndPoint, FColor::Red, false, 1.f, 0, 2.f);
+
+		if (bHit && HitResult.GetActor())
 		{
-			FVector ShotDirection = FMath::VRandCone(
-				StartDirection,
-				FMath::DegreesToRadians(SpreadAngle)
-			);
+			LastHitActor = HitResult.GetActor(); //Hit 액터 저장
+			UE_LOG(LogTemp, Warning, TEXT("Hit: %s"), *HitResult.GetActor()->GetName()); //충돌한 액터 이름 로그
 
-			FVector EndPoint = StartPoint + ShotDirection * ShotgunRange; // 발사될 방향 계산
-
-			FHitResult HitResult;
-
-			bool bHit = GetWorld()->LineTraceSingleByChannel( // 맞으면 HitResult 안에 충돌 정보가 저장
-				HitResult,
-				StartPoint,
-				EndPoint,
-				ECC_Visibility,
-				CollisionParameters
-			);
-
-			DrawDebugLine(GetWorld(), MuzzlePoint->GetComponentLocation(), EndPoint, FColor::Red, false, 1.f, 0, 2.f);
-
-			if (bHit && HitResult.GetActor())
+			//총알 구멍
+			if (BulletHitMaterial)
 			{
-				LastHitActor = HitResult.GetActor(); //Hit 액터 저장
-				UE_LOG(LogTemp, Warning, TEXT("Hit: %s"), *HitResult.GetActor()->GetName()); //충돌한 액터 이름 로그
+				FVector DecalLocation =
+					HitResult.ImpactPoint + HitResult.ImpactNormal * 1.f;
 
-				//총알 구멍
-				if (BulletHitMaterial)
-				{
-					FVector DecalLocation =
-						HitResult.ImpactPoint + HitResult.ImpactNormal * 1.f;
-					
-					FRotator DecalRotation =
-						HitResult.ImpactNormal.Rotation();
+				FRotator DecalRotation =
+					HitResult.ImpactNormal.Rotation();
 
-					UGameplayStatics::SpawnDecalAtLocation(
-						GetWorld(),
-						BulletHitMaterial,
-						BulletHitSize,
-						DecalLocation,
-						DecalRotation,
-						BulletHitLifeTime
-					);
-				}
-
-				AEnemyBase* HitEnemy = Cast<AEnemyBase>(LastHitActor);
-
-				//데미지 처리 총기 line
-				if (HitEnemy)
-				{
-					FPointDamageEvent PointDamageEvent;
-					PointDamageEvent.Damage = DamagePerPellet;
-					PointDamageEvent.HitInfo = HitResult;
-					PointDamageEvent.ShotDirection = ShotDirection;
-					PointDamageEvent.ShotDirection = ShotDirection;
-
-					AController* InstigatorController =
-						CurrentCharacter ? CurrentCharacter->GetController() : nullptr;
-
-					HitEnemy->TakeDamage(DamagePerPellet, PointDamageEvent, InstigatorController, this);
-				}
+				UGameplayStatics::SpawnDecalAtLocation(
+					GetWorld(),
+					BulletHitMaterial,
+					BulletHitSize,
+					DecalLocation,
+					DecalRotation,
+					BulletHitLifeTime
+				);
 			}
-			else
+
+			AEnemyBase* HitEnemy = Cast<AEnemyBase>(LastHitActor);
+
+			//데미지 처리 총기 line
+			if (HitEnemy)
 			{
-				LastHitActor = nullptr; //충돌 없으면 null로 초기화	
-				UE_LOG(LogTemp, Warning, TEXT("Shotgun fired but hit nothing."));
+				FPointDamageEvent PointDamageEvent;
+				PointDamageEvent.Damage = DamagePerBullet;
+				PointDamageEvent.HitInfo = HitResult;
+				PointDamageEvent.ShotDirection = ShotDirection;
+				PointDamageEvent.ShotDirection = ShotDirection;
+
+				AController* InstigatorController =
+					CurrentCharacter ? CurrentCharacter->GetController() : nullptr;
+
+				HitEnemy->TakeDamage(DamagePerBullet, PointDamageEvent, InstigatorController, this);
 			}
-			UE_LOG(LogTemp, Log, TEXT("Shotgun fired! Remaining ammo: %d"), CurrentAmmo);
 		}
+		else
+		{
+			LastHitActor = nullptr; //충돌 없으면 null로 초기화	
+		}
+
+
 
 		//muzzle flash
 		if (MuzzleFlash && MuzzleFlashTextures.Num() > 0)
@@ -337,7 +302,7 @@ void AShotgun::Fire()
 }
 
 //재장전
-void AShotgun::Reload()
+void AAssultRifle::Reload()
 {
 	if (bIsReloading || CurrentAmmo == MaxAmmo) return;
 
@@ -349,18 +314,16 @@ void AShotgun::Reload()
 		CurrentCharacter->SetBlockLeftHandIK(true);
 	}
 
-	if (GunMesh && GunReloadAnimation)
-	{
-		GunMesh->SetAnimationMode(EAnimationMode::AnimationSingleNode);
-		GunMesh->PlayAnimation(GunReloadAnimation, false);
-	}
-
-	//shells dropped
-	SpawnShotgunShells();
-
 	if (ReloadSound)
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, ReloadSound, GetActorLocation());
+	}
+
+	//reload anim
+	if (!ReloadMontage)
+	{
+		UE_LOG(LogTemp, Error, TEXT("ReloadMontage is NULL"));
+		return;
 	}
 
 	if (CurrentCharacter && CurrentCharacter->GetMesh())
@@ -371,16 +334,18 @@ void AShotgun::Reload()
 		}
 	}
 
+	DropMagazine();
+
 	GetWorld()->GetTimerManager().SetTimer(
 		ReloadTimer,
 		this,
-		&AShotgun::EndReload,
+		&AAssultRifle::EndReload,
 		ReloadDuration,
 		false
 	);
 }
 
-void AShotgun::EndReload()
+void AAssultRifle::EndReload()
 {
 	CurrentAmmo = MaxAmmo;
 	CanFire = true;
@@ -391,11 +356,11 @@ void AShotgun::EndReload()
 		CurrentCharacter->SetBlockLeftHandIK(false);
 	}
 
-
+	SpawnMagazine();
 	UE_LOG(LogTemp, Warning, TEXT("Shotgun reloaded! Ammo reset to: %d"), CurrentAmmo);
 }
 
-void AShotgun::Zoom(bool bIsZoom)
+void AAssultRifle::Zoom(bool bIsZoom)
 {
 	if (!CurrentCharacter || !CurrentCharacter->GetFollowCamera())
 	{
@@ -415,7 +380,7 @@ void AShotgun::Zoom(bool bIsZoom)
 	}
 }
 
-void AShotgun::Melee()
+void AAssultRifle::Melee()
 {
 	if (bIsMeleeing) return;
 
@@ -434,13 +399,13 @@ void AShotgun::Melee()
 	GetWorld()->GetTimerManager().SetTimer(
 		MeleeTimer,
 		this,
-		&AShotgun::EndMelee,
+		&AAssultRifle::EndMelee,
 		MeleeDuration,
 		false
 	);
 }
 
-void AShotgun::EndMelee()
+void AAssultRifle::EndMelee()
 {
 	bIsMeleeing = false;
 	CanFire = true;

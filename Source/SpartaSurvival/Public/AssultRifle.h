@@ -11,16 +11,16 @@
 #include "Animation/AnimMontage.h"
 #include "CoreMinimal.h"
 #include "DefaultGun.h"
-#include "Shotgun.generated.h"
+#include "AssultRifle.generated.h"
 
 
 
-class EnemyBase; 
+class EnemyBase;
 class ASpartaSurvivalCharacter;
 class TimerManager;
 
 UCLASS()
-class SPARTASURVIVAL_API AShotgun : public ADefaultGun
+class SPARTASURVIVAL_API AAssultRifle : public ADefaultGun
 {
 	GENERATED_BODY()
 private:
@@ -32,10 +32,9 @@ private:
 	void EndReload();
 	void EndMelee();
 
-	float ShotgunRange;
-	int32 PelletCount;
+	float AssultRifleRange;
+	float DamagePerBullet;
 	float SpreadAngle;
-	float DamagePerPellet;
 
 protected:
 	ASpartaSurvivalCharacter* CurrentCharacter;
@@ -68,24 +67,25 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound")
 	USoundBase* ReloadSound;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
-	UAnimationAsset* GunReloadAnimation;
-
 	UPROPERTY(EditAnywhere, Category = "Camera")
 	TSubclassOf<UCameraShakeBase> FireCameraShake;
 
-	UPROPERTY(EditAnywhere, Category="Shell")
-	UStaticMesh* ShellMesh;
+	UPROPERTY(EditAnywhere, Category = "Magazine")
+	UStaticMesh* MagazineMesh;
 
-	UPROPERTY(EditAnywhere, Category="Shell")
-	float ShellLifeTime = 3.0f;
+	UPROPERTY(EditAnywhere, Category = "Magazine")
+	float MagazineLifeTime = 3.0f;
 
-	UPROPERTY(EditAnywhere, Category = "Shell")
-	USceneComponent* ShellSpawnPoint;
+	UPROPERTY(EditAnywhere, Category = "Magazine")
+	USceneComponent* MagazineSpawnPoint;
 
-	void SpawnShotgunShells();
+	UPROPERTY()
+	AStaticMeshActor* CurrentMagazineActor;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="BulletHit")
+	void SpawnMagazine();
+	void DropMagazine();
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "BulletHit")
 	UMaterialInterface* BulletHitMaterial;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "BulletHit")
@@ -104,7 +104,7 @@ protected:
 	void HideCrosshair();
 
 public:
-	AShotgun();
+	AAssultRifle();
 
 	USceneComponent* GetGripPoint() const { return GripPoint; }
 	USceneComponent* GetSupportPoint() const { return SupportPoint; }
