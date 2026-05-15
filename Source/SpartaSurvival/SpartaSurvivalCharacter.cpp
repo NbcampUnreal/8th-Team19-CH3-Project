@@ -16,6 +16,7 @@
 #include "Components/SceneComponent.h"
 #include "DefaultGun.h"
 #include "Shotgun.h"
+#include "AssultRifle.h"
 #include "UObject/ConstructorHelpers.h"
 
 
@@ -85,6 +86,15 @@ ASpartaSurvivalCharacter::ASpartaSurvivalCharacter()
 	{
 		ShotgunBP = ShotgunClass.Class;
 	}
+	//assultrifle bp 
+	static ConstructorHelpers::FClassFinder<AAssultRifle> AssultRifleClass(
+		TEXT("/Game/Blueprints/BP_AssultRifle")
+	);
+
+	if (AssultRifleClass.Succeeded())
+	{
+		AssultRifleBP = AssultRifleClass.Class;
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -106,26 +116,21 @@ void ASpartaSurvivalCharacter::BeginPlay()
 	AdjustCapsuleSize();
 	ApplyMovementSpeed();
 
-	if (!ShotgunBP)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("ShotgunBP is null."));
-		return;
-	}
+	//총기 캐릭터가 진짜로 보이게 드는 곳
+	if (!AssultRifleBP) return;
 
 	FActorSpawnParameters Params;
 	Params.Owner = this;
 	Params.Instigator = this;
 
-	AShotgun* SpawnedShotgun = GetWorld()->SpawnActor<AShotgun>(
-		ShotgunBP,
+	AAssultRifle* SpawnedAssultRifle = GetWorld()->SpawnActor<AAssultRifle>(
+		AssultRifleBP,
 		GetActorLocation(),
 		GetActorRotation(),
 		Params
 	);
 
-	SpawnedShotgun->EquipToCharacter(this);
-
-
+	SpawnedAssultRifle->EquipToCharacter(this);
 }
 
 void ASpartaSurvivalCharacter::Tick(float DeltaTime)
@@ -161,11 +166,13 @@ void ASpartaSurvivalCharacter::Tick(float DeltaTime)
 	//		)
 	//	);
 	//}
-	if (AShotgun* Shotgun = Cast<AShotgun>(EquippedGun))
+
+	//왼손 붙이기
+	if (AAssultRifle* AssultRifle = Cast<AAssultRifle>(EquippedGun))
 	{
-		if (Shotgun->GetSupportPoint())
+		if (AssultRifle->GetSupportPoint())
 		{
-			FVector WorldLoc = Shotgun->GetSupportPoint()->GetComponentLocation();
+			FVector WorldLoc = AssultRifle->GetSupportPoint()->GetComponentLocation();
 
 			LeftHandIKLocation =
 				GetMesh()->GetComponentTransform().InverseTransformPosition(WorldLoc);
@@ -589,6 +596,11 @@ void ASpartaSurvivalCharacter::Melee()
 	{
 		EquippedGun->Melee();
 	}
+}
+
+void ASpartaSurvivalCharacter::SetBlockLeftHandIK(bool bBlock)
+{
+	bBlockLeftHandIK = bBlock;
 }
 
 

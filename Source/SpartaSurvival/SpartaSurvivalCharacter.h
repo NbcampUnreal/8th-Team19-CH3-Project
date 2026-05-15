@@ -17,6 +17,7 @@ struct FInputActionValue;
 class USceneComponent;
 class ADefaultGun;
 class AShotgun;
+class AAssultRifle;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
@@ -307,11 +308,16 @@ public:
 	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "Gun")
 	AShotgun* StartingShotgun = nullptr;
 
+	void SetBlockLeftHandIK(bool bBlock);
+	bool bBlockLeftHandIK = false;
 
 protected:
 	//샷건 bp 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gun")
 	TSubclassOf<AShotgun> ShotgunBP;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gun")
+	TSubclassOf<AAssultRifle> AssultRifleBP;
 
 	//현재 장착된 총기 정보
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")
