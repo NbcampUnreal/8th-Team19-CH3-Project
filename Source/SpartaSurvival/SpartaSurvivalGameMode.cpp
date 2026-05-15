@@ -261,3 +261,9 @@ void ASpartaSurvivalGameMode::SpawnBoss()
 	// 아무 기능 없이 로그만 찍어서 호출 확인!
 	UE_LOG(LogTemp, Error, TEXT("보스 소환 함수가 정상적으로 호출되었습니다!"));
 }
+}
+
+
+void ASpartaSurvivalGameMode::GameClear()
+{
+}
