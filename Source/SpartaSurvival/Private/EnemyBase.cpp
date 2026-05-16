@@ -100,8 +100,6 @@ void AEnemyBase::AttackCheck()
     FCollisionQueryParams Params;
     Params.AddIgnoredActor(this);
 
-    float SphereRadius = 60.f;
-
    
     bool bHit = GetWorld()->SweepMultiByChannel(
         HitResults,
