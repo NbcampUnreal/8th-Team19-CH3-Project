@@ -49,6 +49,9 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     float AttackDamage = 10.f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attack")
+    float SphereRadius = 60.f;
+
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
     EEnemyState EnemyState = EEnemyState::Idle;
 
