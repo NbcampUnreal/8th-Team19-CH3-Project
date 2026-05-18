@@ -9,6 +9,8 @@
 #include "EnemyBase.h"
 #include "Engine/DamageEvents.h"
 #include "GameFramework/Controller.h"
+#include "GameFramework/DamageType.h"
+#include "EnemyBase.h"
 #include "Kismet/GameplayStatics.h"
 
 
@@ -20,12 +22,13 @@ AAssultRifle::AAssultRifle()
 	ZoomMultiplier = 1.4f;
 	ReloadDuration = 1.5f;
 	MaxAmmo = 32;
+	MaxRecoil = static_cast<float>(MaxAmmo) * RecoilPerShot;
 	CurrentAmmo = MaxAmmo;
 	CanFire = true;
 
 	AssultRifleRange = 2000.f;
 	DamagePerBullet = 10.f;
-	SpreadAngle = 0.;
+	SpreadAngle = 1.f;
 
 	MeleeDuration = .8f;
 	MeleeRange = 150.f;
@@ -73,25 +76,29 @@ AAssultRifle::AAssultRifle()
 	if (Flash01.Succeeded()) MuzzleFlashTextures.Add(Flash01.Object);
 	if (Flash02.Succeeded()) MuzzleFlashTextures.Add(Flash02.Object);
 	if (Flash03.Succeeded()) MuzzleFlashTextures.Add(Flash03.Object);
+
+	//zoom cam
+
+	ZoomCamPosition = CreateDefaultSubobject<USceneComponent>(TEXT("ZoomCamPoint"));
+	ZoomCamPosition->SetupAttachment(GunMesh);
 }
 void AAssultRifle::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (bIsTriggerHeld || !bRecoveringRecoil || !CurrentCharacter) return;
+	if (!CurrentCharacter) return;
 
-	APlayerController* PlayerController = Cast<APlayerController>(CurrentCharacter->GetController());
+	APlayerController* PlayerController =
+		Cast<APlayerController>(CurrentCharacter->GetController());
+
 	if (!PlayerController) return;
 
-	if (!bIsTriggerHeld && CurrentRecoil > 0.f)
-	{
-		float RecoverRecoil =
-			FMath::Min(CurrentRecoil, RecoilRecoverySpeed * DeltaTime);
-
-		CurrentRecoil -= RecoverRecoil;
-		PlayerController->AddPitchInput(RecoverRecoil);
+	if (!bIsTriggerHeld && CurrentRecoil > 0.f) 
+	{ 
+		float RecoverRecoil = FMath::Min(CurrentRecoil, RecoilRecoverySpeed * DeltaTime); 
+		CurrentRecoil -= RecoverRecoil; 
+		PlayerController->AddPitchInput(RecoverRecoil); 
 	}
-
 }
 void AAssultRifle::ShowCrosshair()
 {
@@ -164,10 +171,7 @@ void AAssultRifle::DropMagazine()
 }
 void AAssultRifle::ApplyRecoil(APlayerController* PlayerController)
 {
-	if (!CurrentCharacter || !PlayerController) return;
-
 	float Kick = FMath::Min(RecoilPerShot, MaxRecoil - CurrentRecoil);
-
 	if (Kick <= 0.f) return;
 
 	CurrentRecoil += Kick;
@@ -241,7 +245,15 @@ void AAssultRifle::FireOnce()
 
 		if (!bDeprojected) return;
 
-		FVector EndPoint = StartPoint + ShotDirection * AssultRifleRange;
+		SpreadAngle = bIsScoped ? 0.f : 1.f;
+
+		FVector FinalShotDirection = FMath::VRandCone(
+			ShotDirection.GetSafeNormal(),
+			FMath::DegreesToRadians(SpreadAngle)
+		);
+		
+		FVector EndPoint = StartPoint + FinalShotDirection * AssultRifleRange;
+
 		FCollisionQueryParams CollisionParameters;
 		CollisionParameters.AddIgnoredActor(this);
 		CollisionParameters.AddIgnoredActor(GetOwner());
@@ -259,6 +271,27 @@ void AAssultRifle::FireOnce()
 		);
 
 		DrawDebugLine(GetWorld(), MuzzlePoint->GetComponentLocation(), EndPoint, FColor::Red, false, 1.f, 0, 2.f);
+
+		if (bHit && HitResult.GetActor())
+		{
+			AEnemyBase* Enemy = Cast<AEnemyBase>(HitResult.GetActor());
+
+			if (Enemy)
+			{
+				FVector BulletDirection = (EndPoint - StartPoint).GetSafeNormal();
+
+				UGameplayStatics::ApplyPointDamage(
+					Enemy,
+					DamagePerBullet,
+					BulletDirection,
+					HitResult,
+					CurrentCharacter->GetController(),
+					this,
+					UDamageType::StaticClass()
+				);
+
+			}
+		}
 
 		ApplyRecoil(PlayerController);
 
@@ -439,9 +472,15 @@ void AAssultRifle::Zoom(bool bIsZoom)
 	if (!CurrentCharacter || !CurrentCharacter->GetFollowCamera()) return;
 
 	if (bIsZoom)
+	{
+		bIsScoped = true;
 		CurrentCharacter->GetFollowCamera()->SetFieldOfView(55.f);
+	}
 	else
+	{
+		bIsScoped = false;
 		CurrentCharacter->GetFollowCamera()->SetFieldOfView(90.f);
+	}
 }
 
 void AAssultRifle::Melee()

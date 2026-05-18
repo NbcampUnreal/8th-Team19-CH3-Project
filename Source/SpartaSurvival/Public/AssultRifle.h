@@ -125,9 +125,11 @@ public:
 	void FireOnce();
 	void EndFire();
 private:
-	float RecoilPerShot = .25f;
+
+	float RecoilPerShot = .3f;
 	float MaxRecoil = 3.f;
 	float CurrentRecoil = 0.0f;
+
 	float RecoilRecoverySpeed = 5.f; //초당 얼마 복구
 	bool bIsTriggerHeld = false;
 
@@ -135,6 +137,11 @@ private:
 
 	FRotator SavedCameraRot;
 	bool bRecoveringRecoil;
+
+protected:
+	UPROPERTY(EditAnywhere, Category = "Cam")
+	USceneComponent* ZoomCamPosition;
+	bool bIsScoped = false;
 
 public:
 	virtual void Tick(float DeltaTime) override;
