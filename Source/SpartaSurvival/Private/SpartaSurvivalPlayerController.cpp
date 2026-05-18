@@ -3,6 +3,8 @@
 
 #include "SpartaSurvivalPlayerController.h"
 #include "Blueprint/UserWidget.h"
+#include "SpartaSurvivalGameState.h"
+
 
 
 
@@ -113,8 +115,36 @@ void ASpartaSurvivalPlayerController::ShowPauseMenu()
 }
 void ASpartaSurvivalPlayerController::ShowLevelUp()
 {
+	if (LevelUpWidgetInstance && LevelUpWidgetInstance->IsInViewport())
+	{
+		return;
+	}
+	if (LevelUpWidgetClass)
+	{
+		if (!LevelUpWidgetInstance)
+		{
+			LevelUpWidgetInstance = CreateWidget<UUserWidget>(this, LevelUpWidgetClass);
+		}
+	}
+	if(LevelUpWidgetInstance)
+	{
+		// 화면에 띄우기
+		LevelUpWidgetInstance->AddToViewport();
 
+		// 게임 일시정지 (뱀서 스타일)
+		SetPause(true);
+
+		// 마우스 커서 보이게 설정
+		bShowMouseCursor = true;
+
+		// 마우스가 UI 조작과 게임 플레이 모두 가능하도록 입력 모드 변경
+		FInputModeGameAndUI InputMode;
+		InputMode.SetWidgetToFocus(LevelUpWidgetInstance->GetCachedWidget());
+		SetInputMode(InputMode);
+	}
 }
+
+
 void ASpartaSurvivalPlayerController::StartGame()
 {
 

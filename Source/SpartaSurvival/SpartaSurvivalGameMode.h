@@ -26,11 +26,11 @@ public:
 	void GameClear();
 
 	//점수
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GameData")
-	int32 CurrentScore = 0;
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GameData")
+	//int32 CurrentScore = 0;
 
-	UFUNCTION(BlueprintCallable, Category = "GameSystem")
-	void AddScore(int32 Amount);
+	//UFUNCTION(BlueprintCallable, Category = "GameSystem")
+	//void AddScore(int32 Amount);
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Spawning")
 	class UEnemySpawnComponent* EnemySpawnComp;
@@ -59,14 +59,22 @@ protected:
 
 	void Gamelevel(int32 CurrentStage);
 
-private:
+public:
 	
 //시간관련	
-void HandleMainTimerElapsed();
-	int32 AccumulatedSeconds;
-	FTimerHandle MainTimerHandle;
+	UFUNCTION(BlueprintCallable, Category = "GameSystem")
+	void HandleMainTimerElapsed();
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GameSystem")
+    int32 AccumulatedSeconds;
+
+      UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GameSystem")
+      FTimerHandle MainTimerHandle;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GameSystem")
 	int32 StageTime;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GameSystem")
 	int32 CurrentStage;
 
 };

@@ -88,7 +88,9 @@ public:
     UFUNCTION(BlueprintCallable, Category = "MainMenu")
     void StartGame();
 
-
+    // 게임오버
+   // UFUNCTION(BlueprintCallable, Category = "MainMenu")
+ //   void ShowGameOver();
 
 
 protected:

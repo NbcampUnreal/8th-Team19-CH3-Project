@@ -7,6 +7,8 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "EnemySpawnComponent.h"
 #include "Engine/TargetPoint.h"
+#include "SpartaSurvivalGameState.h"
+#include "SpartaSurvivalPlayerController.h"
 
 
 ASpartaSurvivalGameMode::ASpartaSurvivalGameMode()
@@ -148,8 +150,13 @@ void ASpartaSurvivalGameMode::StartGame(FName LevelName)
 //캐릭터 사망
 void ASpartaSurvivalGameMode::GameOver()
 {
-	GetWorldTimerManager().PauseTimer(MainTimerHandle);
-
+	//if (CurrentHP = 0)
+//	{
+		//ShowGameOver();
+		//GetWorldTimerManager().PauseTimer(MainTimerHandle);
+	
+	
+//	}
 
 	/*APlayerController* PC = GetWorld()->GetFirstPlayerController();
 	if (PC){
@@ -167,11 +174,11 @@ void ASpartaSurvivalGameMode::GameClear()
 {
 }
 //점수
-void ASpartaSurvivalGameMode::AddScore(int32 Amount)
-{
-	CurrentScore += Amount;
+//void ASpartaSurvivalGameMode::AddScore(int32 Amount)
+//{
+	//CurrentScore += Amount;
 	
-	UE_LOG(LogTemp, Warning, TEXT("점수 획득: +%d | 현재 총점: %d"), Amount, CurrentScore);
+	//UE_LOG(LogTemp, Warning, TEXT("점수 획득: +%d | 현재 총점: %d"), Amount, CurrentScore);
 	//적 코드에 넣어서 실행이 깔끔할듯 안되면 모드에서 다시처리
 	/*ASpartaSurvivalGameMode* GM = Cast<ASpartaSurvivalGameMode>(GetWorld()->GetAuthGameMode());
 if (GM)
@@ -179,7 +186,7 @@ if (GM)
     GM->AddScore(100); // 100점 추가
 }*/
 
-}
+//}
 
 //나중에 수정
 void ASpartaSurvivalGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -199,6 +206,36 @@ void ASpartaSurvivalGameMode::HandleMainTimerElapsed()
 {
 	AccumulatedSeconds += 1;
 
+	if (GetWorld())
+	{
+		ASpartaSurvivalGameState* GS = Cast<ASpartaSurvivalGameState>(GetWorld()->GetGameState());
+		if (GS)
+		{
+			// 1. [1초마다] 체력 10 감소, 경험치 10 증가
+			GS->AddPlayerHP(-10.f);
+			
+			int32 BeforeLevel = GS->PlayerLevel;
+			GS->AddPlayerEXP(10.f);
+			if (GS->PlayerLevel > BeforeLevel)
+			{
+				ASpartaSurvivalPlayerController* PC = Cast<ASpartaSurvivalPlayerController>(GetWorld()->GetFirstPlayerController());
+				if (PC)
+				{
+					
+					PC->ShowLevelUp();
+				}
+			}
+
+			// 2. [3초마다] 체력 50 회복, 점수 1점 증가 (3의 배수 초 일 때)
+			if (AccumulatedSeconds % 3 == 0)
+			{
+				GS->AddPlayerHP(50.f);
+				GS->AddScore(1);
+
+				UE_LOG(LogTemp, Warning, TEXT("[3초 주기] HP 50 회복 및 1점 획득! 현재 총점: %d"), GS->CurrentScore);
+			}
+		}
+	}
 
 	if (AccumulatedSeconds % 2 == 0)
 	{
