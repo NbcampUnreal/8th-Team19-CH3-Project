@@ -118,6 +118,27 @@ public:
 	virtual void EquipToCharacter(ASpartaSurvivalCharacter* Character) override;
 	virtual void Melee() override;
 
+	FTimerHandle FullAutoTimer;
+	float FireRate = 0.1f; //약 600RPM
+	bool bIsFiring = true;
+
+	void FireOnce();
+	void EndFire();
+private:
+	float RecoilPerShot = .25f;
+	float MaxRecoil = 3.f;
+	float CurrentRecoil = 0.0f;
+	float RecoilRecoverySpeed = 5.f; //초당 얼마 복구
+	bool bIsTriggerHeld = false;
+
+	void ApplyRecoil(APlayerController* PlayerController);
+
+	FRotator SavedCameraRot;
+	bool bRecoveringRecoil;
+
+public:
+	virtual void Tick(float DeltaTime) override;
+
 	//ui나 외부에서 필요한 함수!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 public:
 	int32 GetCurrentAmmo() const { return CurrentAmmo; }

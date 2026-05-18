@@ -15,6 +15,8 @@
 
 AAssultRifle::AAssultRifle()
 {
+	PrimaryActorTick.bCanEverTick = true;
+
 	ZoomMultiplier = 1.4f;
 	ReloadDuration = 1.5f;
 	MaxAmmo = 32;
@@ -44,7 +46,7 @@ AAssultRifle::AAssultRifle()
 	GunMesh->SetGenerateOverlapEvents(false);
 
 	MuzzlePoint->SetRelativeLocation(FVector(0.f, 90.f, 0.f));
-	
+
 	//magazinePoint
 	MagazineSpawnPoint = CreateDefaultSubobject<USceneComponent>(TEXT("MagazinePoint"));
 	MagazineSpawnPoint->SetupAttachment(GunMesh);
@@ -72,16 +74,35 @@ AAssultRifle::AAssultRifle()
 	if (Flash02.Succeeded()) MuzzleFlashTextures.Add(Flash02.Object);
 	if (Flash03.Succeeded()) MuzzleFlashTextures.Add(Flash03.Object);
 }
+void AAssultRifle::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (bIsTriggerHeld || !bRecoveringRecoil || !CurrentCharacter) return;
+
+	APlayerController* PlayerController = Cast<APlayerController>(CurrentCharacter->GetController());
+	if (!PlayerController) return;
+
+	if (!bIsTriggerHeld && CurrentRecoil > 0.f)
+	{
+		float RecoverRecoil =
+			FMath::Min(CurrentRecoil, RecoilRecoverySpeed * DeltaTime);
+
+		CurrentRecoil -= RecoverRecoil;
+		PlayerController->AddPitchInput(RecoverRecoil);
+	}
+
+}
 void AAssultRifle::ShowCrosshair()
 {
 	if (CrosshairWidget || !CrosshairWidgetClass || !CurrentCharacter) return;
 
-	APlayerController* PC =
+	APlayerController* PlayerController =
 		Cast<APlayerController>(CurrentCharacter->GetController());
 
-	if (!PC || !PC->IsLocalController()) return;
+	if (!PlayerController || !PlayerController->IsLocalController()) return;
 
-	CrosshairWidget = CreateWidget<UUserWidget>(PC, CrosshairWidgetClass);
+	CrosshairWidget = CreateWidget<UUserWidget>(PlayerController, CrosshairWidgetClass);
 
 	if (CrosshairWidget)
 	{
@@ -141,6 +162,19 @@ void AAssultRifle::DropMagazine()
 
 	DroppedMagazine->SetLifeSpan(3.0f);
 }
+void AAssultRifle::ApplyRecoil(APlayerController* PlayerController)
+{
+	if (!CurrentCharacter || !PlayerController) return;
+
+	float Kick = FMath::Min(RecoilPerShot, MaxRecoil - CurrentRecoil);
+
+	if (Kick <= 0.f) return;
+
+	CurrentRecoil += Kick;
+
+	PlayerController->AddPitchInput(-Kick);
+}
+
 //캐릭터에게 장착
 void AAssultRifle::EquipToCharacter(ASpartaSurvivalCharacter* Character)
 {
@@ -169,7 +203,8 @@ void AAssultRifle::EquipToCharacter(ASpartaSurvivalCharacter* Character)
 }
 
 //assult rifle
-void AAssultRifle::Fire()
+
+void AAssultRifle::FireOnce()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Firning"));
 	if (CanFire && CurrentAmmo > 0)
@@ -187,29 +222,17 @@ void AAssultRifle::Fire()
 			);
 		}
 
-		if (CurrentCharacter && FireCameraShake)
-		{
-			APlayerController* PC = Cast<APlayerController>(CurrentCharacter->GetController());
-
-			if (PC && PC->PlayerCameraManager)
-			{
-				PC->PlayerCameraManager->StartCameraShake(FireCameraShake, 10.f);
-			}
-		}
-
-
-
-		APlayerController* PC = Cast<APlayerController>(CurrentCharacter->GetController());
-		if (!PC) return;
+		APlayerController* PlayerController = Cast<APlayerController>(CurrentCharacter->GetController());
+		if (!PlayerController) return;
 
 		int32 ViewportX = 0;
 		int32 ViewportY = 0;
-		PC->GetViewportSize(ViewportX, ViewportY);
+		PlayerController->GetViewportSize(ViewportX, ViewportY);
 
 		FVector StartPoint;
 		FVector ShotDirection;
 
-		bool bDeprojected = PC->DeprojectScreenPositionToWorld(
+		bool bDeprojected = PlayerController->DeprojectScreenPositionToWorld(
 			ViewportX * 0.5f,
 			ViewportY * 0.5f,
 			StartPoint,
@@ -236,6 +259,8 @@ void AAssultRifle::Fire()
 		);
 
 		DrawDebugLine(GetWorld(), MuzzlePoint->GetComponentLocation(), EndPoint, FColor::Red, false, 1.f, 0, 2.f);
+
+		ApplyRecoil(PlayerController);
 
 		if (bHit && HitResult.GetActor())
 		{
@@ -314,6 +339,40 @@ void AAssultRifle::Fire()
 	}
 }
 
+void AAssultRifle::Fire()
+{
+	APlayerController* PlayerController = Cast<APlayerController>(CurrentCharacter->GetController());
+	if (!PlayerController) return;
+
+	if (!bIsTriggerHeld)
+	{
+		bRecoveringRecoil = false;          // 복구 중단
+		SavedCameraRot= PlayerController->GetControlRotation(); // 현재 위치 저장
+	}
+
+	bIsTriggerHeld = true;
+
+	if (bIsFiring) return;
+	bIsFiring = false;
+	FireOnce();
+
+	GetWorldTimerManager().SetTimer(
+		FullAutoTimer,
+		this,
+		&AAssultRifle::Fire,
+		FireRate, //약 600RPM
+		true);
+}
+
+void AAssultRifle::EndFire()
+{
+	bIsTriggerHeld = false;
+	bIsFiring = false;
+	bRecoveringRecoil = true;
+
+	GetWorldTimerManager().ClearTimer(FullAutoTimer);
+}
+
 //재장전
 void AAssultRifle::Reload()
 {
@@ -375,22 +434,14 @@ void AAssultRifle::EndReload()
 
 void AAssultRifle::Zoom(bool bIsZoom)
 {
-	if (!CurrentCharacter || !CurrentCharacter->GetFollowCamera())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Zoom failed: CurrentCharacter or Camera is NULL"));
-		return;
-	}
+	bRecoveringRecoil = false;
+
+	if (!CurrentCharacter || !CurrentCharacter->GetFollowCamera()) return;
 
 	if (bIsZoom)
-	{
 		CurrentCharacter->GetFollowCamera()->SetFieldOfView(55.f);
-		UE_LOG(LogTemp, Warning, TEXT("Zoom In"));
-	}
 	else
-	{
 		CurrentCharacter->GetFollowCamera()->SetFieldOfView(90.f);
-		UE_LOG(LogTemp, Warning, TEXT("Zoom Out"));
-	}
 }
 
 void AAssultRifle::Melee()

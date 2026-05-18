@@ -254,6 +254,7 @@ void ASpartaSurvivalCharacter::SetupPlayerInputComponent(UInputComponent* Player
 		if (FireAction)
 		{
 			EIC->BindAction(FireAction, ETriggerEvent::Started, this, &ASpartaSurvivalCharacter::Fire);
+			EIC->BindAction(FireAction, ETriggerEvent::Completed, this, &ASpartaSurvivalCharacter::EndFire);
 		}
 
 		if (ReloadAction)
@@ -563,6 +564,18 @@ void ASpartaSurvivalCharacter::Fire()
 		UE_LOG(LogTemp, Warning, TEXT("Fire called, but EquippedGun is NULL."));
 	}
 }
+void ASpartaSurvivalCharacter::EndFire()
+{
+	if (Cast<AShotgun>(EquippedGun)) return;
+
+	AAssultRifle* Rifle = Cast<AAssultRifle>(EquippedGun);
+
+	if (Rifle)
+	{
+		Rifle->EndFire();// EquippedGun은 현재 AAssultRifle
+	}
+}
+
 void ASpartaSurvivalCharacter::Reload()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Character Reload called"));

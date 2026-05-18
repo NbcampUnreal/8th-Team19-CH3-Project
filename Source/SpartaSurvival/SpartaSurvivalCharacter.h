@@ -333,6 +333,7 @@ protected:
 
 	// 총기 액션 함수들 
 	void Fire();
+	void EndFire();
 	void Reload();
 	void StartZoom();
 	void EndZoom();
