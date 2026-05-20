@@ -6,7 +6,7 @@
 #include "GameFramework/GameModeBase.h"
 #include "SpartaSurvivalGameMode.generated.h"
 
-UCLASS(minimalapi)
+UCLASS()
 class ASpartaSurvivalGameMode : public AGameModeBase
 {
 
@@ -23,7 +23,7 @@ public:
 	void GameOver();
 
 	UFUNCTION(BlueprintCallable, Category = "GameSystem")
-	void GameClear();
+	void GameClear(int32 inCurrentStage);
 
 	//점수
 	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GameData")
@@ -43,7 +43,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LevelDesign|Boss")
 	FVector BossSpawnLocation;*/
 
-	void SpawnBoss();
+	//void SpawnBoss();
 
 protected:
 

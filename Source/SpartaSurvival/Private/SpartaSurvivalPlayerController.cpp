@@ -21,6 +21,12 @@ ASpartaSurvivalPlayerController::ASpartaSurvivalPlayerController()
 	, PauseMenuWidgetInstance(nullptr)
 	, LevelUpWidgetClass(nullptr)
 	, LevelUpWidgetInstance(nullptr)
+	, GameOverWidgetClass(nullptr)
+	, GameOverWidgetInstance(nullptr)
+	, GameClearWidgetClass(nullptr)
+	, GameClearWidgetInstance(nullptr)
+
+
 {
 	// 생성자 초기화 로직 (없다면 비워두어도 됩니다)
 }
@@ -115,10 +121,7 @@ void ASpartaSurvivalPlayerController::ShowPauseMenu()
 }
 void ASpartaSurvivalPlayerController::ShowLevelUp()
 {
-	if (LevelUpWidgetInstance && LevelUpWidgetInstance->IsInViewport())
-	{
-		return;
-	}
+	
 	if (LevelUpWidgetClass)
 	{
 		if (!LevelUpWidgetInstance)
@@ -143,9 +146,73 @@ void ASpartaSurvivalPlayerController::ShowLevelUp()
 		SetInputMode(InputMode);
 	}
 }
-
-
-void ASpartaSurvivalPlayerController::StartGame()
+void ASpartaSurvivalPlayerController::ShowGameOver()
 {
+	
+	if (HUDWidgetInstance)
+	{
+		HUDWidgetInstance->RemoveFromParent();
+		HUDWidgetInstance = nullptr;
+	}
+	if (GameOverWidgetClass)
+	{
 
+		if (!GameOverWidgetInstance)
+		{
+			GameOverWidgetInstance = CreateWidget<UUserWidget>(this, GameOverWidgetClass);
+		}
+
+		if (GameOverWidgetInstance)
+		{
+			// 화면에 띄우기
+			GameOverWidgetInstance->AddToViewport();
+
+			// 게임 일시정지 (뱀서 스타일)
+			SetPause(true);
+
+			// 마우스 커서 보이게 설정
+			bShowMouseCursor = true;
+
+			// 마우스가 UI 조작과 게임 플레이 모두 가능하도록 입력 모드 변경
+			FInputModeGameAndUI InputMode;
+			InputMode.SetWidgetToFocus(GameOverWidgetInstance->GetCachedWidget());
+			SetInputMode(InputMode);
+		}
+	}
 }
+
+void ASpartaSurvivalPlayerController::ShowGameClear()
+{
+	if (HUDWidgetInstance)
+	{
+		HUDWidgetInstance->RemoveFromParent();
+		HUDWidgetInstance = nullptr;
+	}
+	if (GameClearWidgetClass)
+	{
+
+		if (!GameClearWidgetInstance)
+		{
+			GameClearWidgetInstance = CreateWidget<UUserWidget>(this, GameClearWidgetClass);
+		}
+
+		if (GameClearWidgetInstance)
+		{
+			// 화면에 띄우기
+			GameClearWidgetInstance->AddToViewport();
+
+			// 게임 일시정지 (뱀서 스타일)
+			SetPause(true);
+
+			// 마우스 커서 보이게 설정
+			bShowMouseCursor = true;
+
+			// 마우스가 UI 조작과 게임 플레이 모두 가능하도록 입력 모드 변경
+			FInputModeGameAndUI InputMode;
+			InputMode.SetWidgetToFocus(GameClearWidgetInstance->GetCachedWidget());
+			SetInputMode(InputMode);
+		}
+	}
+}
+
+

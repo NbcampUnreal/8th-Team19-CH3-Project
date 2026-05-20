@@ -2,6 +2,8 @@
 
 
 #include "SpartaSurvivalGameState.h"
+#include "SpartaSurvival/SpartaSurvivalGameMode.h"
+
 
 
 
@@ -47,3 +49,24 @@ void ASpartaSurvivalGameState::AddScore(int32 Amount)
         float HPBonus = PlayerLevel * 10.f; 
         MaxHP += HPBonus;     
         CurrentHP = MaxHP; */
+
+void ASpartaSurvivalGameState::AddPlayerHP(float Amount)
+{
+    CurrentHP = FMath::Clamp(CurrentHP + Amount, 0.f, MaxHP);
+    if (CurrentHP <= 0.0f)
+    {
+        if (UWorld* World = GetWorld())
+        {
+            // 내 진짜 게임모드 클래스로 캐스팅(Cast)합니다.
+            if (ASpartaSurvivalGameMode* MyGameMode = Cast<ASpartaSurvivalGameMode>(World->GetAuthGameMode()))
+            {
+              
+                MyGameMode->GameOver();
+            }
+        }
+    }
+}
+void ASpartaSurvivalGameState::AddPlayerAttackPoint(float Amount)
+{
+
+}

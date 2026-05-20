@@ -9,6 +9,8 @@
 #include "Engine/TargetPoint.h"
 #include "SpartaSurvivalGameState.h"
 #include "SpartaSurvivalPlayerController.h"
+#include "BossZombie.h"
+#include "Engine/World.h"
 
 
 ASpartaSurvivalGameMode::ASpartaSurvivalGameMode()
@@ -150,28 +152,41 @@ void ASpartaSurvivalGameMode::StartGame(FName LevelName)
 //캐릭터 사망
 void ASpartaSurvivalGameMode::GameOver()
 {
-	//if (CurrentHP = 0)
-//	{
-		//ShowGameOver();
-		//GetWorldTimerManager().PauseTimer(MainTimerHandle);
-	
-	
-//	}
+    if (GetWorld())
+    {
+        // 1. 플레이어 컨트롤러를 가져옵니다.
+        ASpartaSurvivalPlayerController* PC = Cast<ASpartaSurvivalPlayerController>(GetWorld()->GetFirstPlayerController());
 
-	/*APlayerController* PC = GetWorld()->GetFirstPlayerController();
-	if (PC){
-		PC->bShowMouseCursor = true;
-
-	FInputModeUIOnly InputMode;
-	// 위젯추가(InputMode.SetWidgetToFocus(YourWidget))
-	PC->SetInputMode(InputMode);
-}*/
-//게임일시정지
-//UGameplayStatics::SetGamePaused(GetWorld(), true);
-	
+       
+        if (PC)
+        {
+            PC->ShowGameOver();
+            UE_LOG(LogTemp, Warning, TEXT("게임 오버! 플레이어가 사망했습니다."));
+        }
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT("PlayerController를 가져오지 못했습니다!"));
+        }
+    }
 }
-void ASpartaSurvivalGameMode::GameClear()
+//클리어 수정중
+void ASpartaSurvivalGameMode::GameClear(int32 inCurrentStage)
 {
+	if (inCurrentStage == 5)
+	{
+		if (GetWorld())
+		{
+			// 1. 플레이어 컨트롤러를 가져옵니다.
+			ASpartaSurvivalPlayerController* PC = Cast<ASpartaSurvivalPlayerController>(GetWorld()->GetFirstPlayerController());
+
+			if (PC)
+			{
+				PC->ShowGameClear();
+
+			}
+
+		}
+	}
 }
 //점수
 //void ASpartaSurvivalGameMode::AddScore(int32 Amount)
@@ -183,7 +198,7 @@ void ASpartaSurvivalGameMode::GameClear()
 	/*ASpartaSurvivalGameMode* GM = Cast<ASpartaSurvivalGameMode>(GetWorld()->GetAuthGameMode());
 if (GM)
 {
-    GM->AddScore(100); // 100점 추가
+    GM->AddScore(100); // 100점 추가ㄴ
 }*/
 
 //}
@@ -271,7 +286,7 @@ void ASpartaSurvivalGameMode::Gamelevel(int32 inCurrentStage)
 		GetWorldTimerManager().PauseTimer(MainTimerHandle);
 
 
-		SpawnBoss();
+		//SpawnBoss();
 
 		return;
 	}
@@ -307,9 +322,28 @@ GetWorldTimerManager().SetTimer(SpawnTimerHandle, [this, AmountPerSpawn]()
 UE_LOG(LogTemp, Warning, TEXT("난이도 상승! 주기: %.2f초 | 한 번에 %d마리 소환"), NewInterval, AmountPerSpawn);
 }*/
 
-void ASpartaSurvivalGameMode::SpawnBoss()
+/*void ASpartaSurvivalGameMode::SpawnBoss()
 {
-	// 아무 기능 없이 로그만 찍어서 호출 확인!
-	UE_LOG(LogTemp, Error, TEXT("보스 소환 함수가 정상적으로 호출되었습니다!"));
-}
+	UWorld* World = GetWorld();
+	if (World)
+	{
+		// 스폰할 위치와 회전값 설정
+		FVector SpawnLocation(0.0f, 0.0f, 100.0f); // 원하는 좌표로 변경하세요
+		FRotator SpawnRotation = FRotator::ZeroRotator;
+
+		// 강제 소환 끼임방지
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+		// ABossZombie 스폰 실행
+		ABossZombie* SpawnBoss = World->SpawnActor<ABossZombie>(ABossZombie::StaticClass(), SpawnLocation, SpawnRotation, SpawnParams);
+
+		if (SpawnBoss)
+		{
+		//	SpawnBoss->OnBossDeath.AddDynamic(this, &ASpartaSurvivalGameMode::GameClear);
+			// 스폰 성공 후 처리할 로직 (예: UI 표시, 로그 출력 등)
+			UE_LOG(LogTemp, Warning, TEXT("보스 좀비가 성공적으로 호출되었습니다!"));
+		}
+	}
+}*/
 

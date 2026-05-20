@@ -29,16 +29,24 @@ public:
 
     // ----- 캐릭터나 외부에서 데이터를 더해줄 함수들 -----
     UFUNCTION(BlueprintCallable, Category = "Stats")
-    void AddPlayerHP(float Amount) { CurrentHP = FMath::Clamp(CurrentHP + Amount, 0.f, MaxHP); }
+    void AddPlayerHP(float Amount);
 
     UFUNCTION(BlueprintCallable, Category = "Stats")
     void AddPlayerEXP(float Amount); 
+
+    UFUNCTION(BlueprintCallable, Category = "Stats")
+    void AddPlayerAttackPoint(float Amount);
+
 
 public:
     // 플레이어 관련
     //레벨
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     int32 PlayerLevel = 1;
+
+    //공격력
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    int32 PlayerAttackPoint = 100;
 
     //체력
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
@@ -49,7 +57,7 @@ public:
 
     //경험치
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-    float MaxEXP = 30.f;
+    float MaxEXP = 70.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     float CurrentEXP = 0.f;
@@ -60,5 +68,7 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GameData")
     int32 CurrentScore = 0;
+
+
 
 };

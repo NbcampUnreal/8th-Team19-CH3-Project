@@ -63,6 +63,20 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LevelUp")
     UUserWidget* LevelUpWidgetInstance;
 
+    //게임 오버
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GameOver")
+    TSubclassOf<UUserWidget> GameOverWidgetClass;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GameOver")
+    UUserWidget* GameOverWidgetInstance;
+
+    //게임 오버
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GameOver")
+    TSubclassOf<UUserWidget> GameClearWidgetClass;
+
+    //게임클리어
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GameOver")
+    UUserWidget* GameClearWidgetInstance;
 
     UFUNCTION(BlueprintPure, Category = "HUD")
     UUserWidget* GetHUDWidget() const;
@@ -85,13 +99,16 @@ public:
     void ShowLevelUp();
 
     // 게임 시작
-    UFUNCTION(BlueprintCallable, Category = "MainMenu")
-    void StartGame();
-
-    // 게임오버
    // UFUNCTION(BlueprintCallable, Category = "MainMenu")
- //   void ShowGameOver();
+   // void StartGame();
 
+     //게임오버
+    UFUNCTION(BlueprintCallable, Category = "MainMenu")
+    void ShowGameOver();
+    
+    //게임 클리어
+    UFUNCTION(BlueprintCallable, Category = "MainMenu")
+    void ShowGameClear();
 
 protected:
 
