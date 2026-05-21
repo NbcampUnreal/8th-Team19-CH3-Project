@@ -165,37 +165,45 @@ void AEnemyBase::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 
     if (AIC && PlayerChar)
     {
-       
         FVector Dir = PlayerChar->GetActorLocation() - GetActorLocation();
         Dir.Z = 0.f;
         FRotator TargetRot = Dir.Rotation();
 
-        
         struct FRotationHelper
         {
             int32 Steps = 0;
             FTimerHandle TimerHandle;
         };
 
-       
         TSharedPtr<FRotationHelper> Helper = MakeShareable(new FRotationHelper());
 
-        GetWorldTimerManager().SetTimer(Helper->TimerHandle, [this, TargetRot, Helper]() {
-            if (Helper->Steps >= 100)
+        TWeakObjectPtr<AEnemyBase> WeakThis(this);
+
+        GetWorldTimerManager().SetTimer(Helper->TimerHandle, [WeakThis, TargetRot, Helper]() {
+
+         
+            if (!WeakThis.IsValid())
             {
-                GetWorldTimerManager().ClearTimer(Helper->TimerHandle);
                 return;
             }
 
-            
-            FRotator NewRot = FMath::RInterpTo(GetActorRotation(), TargetRot, 0.01f, 7.f);
-            SetActorRotation(NewRot);
+            if (Helper->Steps >= 100)
+            {
+               
+                if (WeakThis->GetWorld())
+                {
+                    WeakThis->GetWorld()->GetTimerManager().ClearTimer(Helper->TimerHandle);
+                }
+                return;
+            }
+
+           
+            FRotator NewRot = FMath::RInterpTo(WeakThis->GetActorRotation(), TargetRot, 0.01f, 7.f);
+            WeakThis->SetActorRotation(NewRot);
 
             Helper->Steps++;
             }, 0.01f, true);
 
-       
         AIC->ChasePlayer();
     }
 }
-
