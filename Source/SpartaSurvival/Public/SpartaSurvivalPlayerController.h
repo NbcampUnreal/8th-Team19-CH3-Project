@@ -71,11 +71,11 @@ public:
     UUserWidget* GameOverWidgetInstance;
 
     //게임 오버
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GameClear")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GameOver")
     TSubclassOf<UUserWidget> GameClearWidgetClass;
 
     //게임클리어
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GameClear")
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GameOver")
     UUserWidget* GameClearWidgetInstance;
 
     UFUNCTION(BlueprintPure, Category = "HUD")
@@ -103,11 +103,11 @@ public:
    // void StartGame();
 
      //게임오버
-    UFUNCTION(BlueprintCallable, Category = "GameOver")
+    UFUNCTION(BlueprintCallable, Category = "MainMenu")
     void ShowGameOver();
     
     //게임 클리어
-    UFUNCTION(BlueprintCallable, Category = "GameClear")
+    UFUNCTION(BlueprintCallable, Category = "MainMenu")
     void ShowGameClear();
 
 protected:

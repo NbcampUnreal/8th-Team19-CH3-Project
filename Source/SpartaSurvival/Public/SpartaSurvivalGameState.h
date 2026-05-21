@@ -46,7 +46,7 @@ public:
 
     //공격력
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-    int32 PlayerAttackPoint;
+    int32 PlayerAttackPoint = 100;
 
     //체력
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")

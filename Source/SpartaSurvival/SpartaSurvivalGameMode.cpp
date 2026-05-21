@@ -55,14 +55,20 @@ void ASpartaSurvivalGameMode::BeginPlay()
 
 	UE_LOG(LogTemp, Error, TEXT("게임 시작!"));
 
-	if (!EnemySpawnComp)
-	{
-		UE_LOG(LogTemp, Error, TEXT("심각: EnemySpawnComp가 생성되지 않았습니다!"));
-		return;
-	}
+	if (EnemySpawnComp == nullptr)
 	
-	UE_LOG(LogTemp, Warning, TEXT("성공: EnemySpawnComp를 찾았습니다!"));
-		
+
+	{
+
+
+		UE_LOG(LogTemp, Error, TEXT("심각: EnemySpawnComp가 생성되지 않았습니다!"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("성공: EnemySpawnComp를 찾았습니다!"));
+		EnemySpawnComp->StartWave(1);
+	}
+
 	TArray<AActor*> FoundActors;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ATargetPoint::StaticClass(), FoundActors);
 
@@ -76,7 +82,11 @@ void ASpartaSurvivalGameMode::BeginPlay()
 
 	UE_LOG(LogTemp, Warning, TEXT("좀비 스폰 포인트 %d개 등록 완료!"), SpawnPoints.Num());
 
-	EnemySpawnComp->StartWave(CurrentStage);
+	
+	if (EnemySpawnComp)
+	{
+		EnemySpawnComp->StartWave(CurrentStage);
+	}
 
 
 	GetWorld()->GetTimerManager().SetTimer(
@@ -162,8 +172,7 @@ void ASpartaSurvivalGameMode::GameOver()
 //클리어 수정중
 void ASpartaSurvivalGameMode::GameClear(int32 inCurrentStage)
 {
-
-	if (inCurrentStage == 7)
+	if (inCurrentStage == 5)
 	{
 		if (GetWorld())
 		{
@@ -179,7 +188,20 @@ void ASpartaSurvivalGameMode::GameClear(int32 inCurrentStage)
 		}
 	}
 }
+//점수
+//void ASpartaSurvivalGameMode::AddScore(int32 Amount)
+//{
+	//CurrentScore += Amount;
+	
+	//UE_LOG(LogTemp, Warning, TEXT("점수 획득: +%d | 현재 총점: %d"), Amount, CurrentScore);
+	//적 코드에 넣어서 실행이 깔끔할듯 안되면 모드에서 다시처리
+	/*ASpartaSurvivalGameMode* GM = Cast<ASpartaSurvivalGameMode>(GetWorld()->GetAuthGameMode());
+if (GM)
+{
+    GM->AddScore(100); // 100점 추가ㄴ
+}*/
 
+//}
 
 //나중에 수정
 void ASpartaSurvivalGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -198,17 +220,17 @@ void ASpartaSurvivalGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void ASpartaSurvivalGameMode::HandleMainTimerElapsed()
 {
 	AccumulatedSeconds += 1;
-	//테스트용
+
 	if (GetWorld())
 	{
 		ASpartaSurvivalGameState* GS = Cast<ASpartaSurvivalGameState>(GetWorld()->GetGameState());
 		if (GS)
 		{
 			// 1. [1초마다] 체력 10 감소, 경험치 10 증가
-			//GS->AddPlayerHP(-10.f);
+			GS->AddPlayerHP(-10.f);
 			
 			int32 BeforeLevel = GS->PlayerLevel;
-			//GS->AddPlayerEXP(10.f);
+			GS->AddPlayerEXP(10.f);
 			if (GS->PlayerLevel > BeforeLevel)
 			{
 				ASpartaSurvivalPlayerController* PC = Cast<ASpartaSurvivalPlayerController>(GetWorld()->GetFirstPlayerController());
@@ -222,7 +244,7 @@ void ASpartaSurvivalGameMode::HandleMainTimerElapsed()
 			// 2. [3초마다] 체력 50 회복, 점수 1점 증가 (3의 배수 초 일 때)
 			if (AccumulatedSeconds % 3 == 0)
 			{
-			//	GS->AddPlayerHP(50.f);
+				GS->AddPlayerHP(50.f);
 				GS->AddScore(1);
 
 				UE_LOG(LogTemp, Warning, TEXT("[3초 주기] HP 50 회복 및 1점 획득! 현재 총점: %d"), GS->CurrentScore);
@@ -252,7 +274,6 @@ void ASpartaSurvivalGameMode::HandleMainTimerElapsed()
 	{
 		CurrentStage += 1;
 		Gamelevel(CurrentStage);
-		GameClear(CurrentStage);
 	}
 }
 
@@ -260,7 +281,7 @@ void ASpartaSurvivalGameMode::HandleMainTimerElapsed()
 void ASpartaSurvivalGameMode::Gamelevel(int32 inCurrentStage)
 {
 
-	if (inCurrentStage == 9)
+	if (inCurrentStage == 3)
 	{
 		GetWorldTimerManager().PauseTimer(MainTimerHandle);
 
@@ -269,22 +290,19 @@ void ASpartaSurvivalGameMode::Gamelevel(int32 inCurrentStage)
 
 		return;
 	}
-	CurrentStage = inCurrentStage;
+	/*//소환주기 단축
+	float NewInterval = FMath::Max(0.5f, 2.0f - (CurrentStage * 0.2f));
+	GetWorldTimerManager().SetTimer(SpawnTimerHandle, this, &ASpartaSurvivalGameMode::SpawnEnemy, NewInterval, true);
+	
+	//소환량 증가
+	int32 SpawnCount = 3 + (CurrentStage * 2);
 
-	if (EnemySpawnComp)
+	for (int32 i = 0; i < SpawnCount; i++)
 	{
-		
-		EnemySpawnComp->StartWave(CurrentStage);
+		SpawnEnemy();
+	}*/
 
-		
-		int32 DifficultyMultiplier = CurrentStage;
-
-		
-		EnemySpawnComp->RemainingMonsters = EnemySpawnComp->RemainingMonsters * DifficultyMultiplier;
-
-		UE_LOG(LogTemp, Warning, TEXT("난이도 상승! %d 스테이지 좀비 물량 자동으로 %d배 증가 완료 (총 %d마리)"),
-			CurrentStage, DifficultyMultiplier, EnemySpawnComp->RemainingMonsters);
-	}
+	UE_LOG(LogTemp, Warning, TEXT("난이도 상승!"));
 
 }
 

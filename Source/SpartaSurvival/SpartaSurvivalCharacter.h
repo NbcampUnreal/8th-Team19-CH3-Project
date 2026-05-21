@@ -358,6 +358,4 @@ private:
 	//FRotator WeaponJumpOffsetRot = FRotator(10.f, -22.f, 50.f);
 
 	//float WeaponRotInterpSpeed = 10.f;
-
-	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 };

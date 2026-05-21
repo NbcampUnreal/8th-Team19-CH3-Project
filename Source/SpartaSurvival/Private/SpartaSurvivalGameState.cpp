@@ -13,7 +13,6 @@ ASpartaSurvivalGameState::ASpartaSurvivalGameState()
     PlayerLevel = 2;
     CurrentHP = MaxHP;
     CurrentEXP = 0.f;
-    PlayerAttackPoint = 100.0f;
 }
 
 void ASpartaSurvivalGameState::AddPlayerEXP(float Amount)
@@ -28,7 +27,7 @@ void ASpartaSurvivalGameState::AddPlayerEXP(float Amount)
         PlayerLevel++;        // 1. 레벨 증가
         MaxHP += 20.f;        // 2. 최대 체력 20 증가 (원하는 수치로 조절 가능)
         CurrentHP = MaxHP;    // 3. 레벨업 보상으로 체력 풀피 회복
-        PlayerAttackPoint *= 1.2f;
+
         MaxEXP *= 1.3f;       // 4. 다음 레벨업에 필요한 경험치 통 늘리기 (30% 증가)
 
         // 로그창에 레벨업 확인용 출력
@@ -69,8 +68,5 @@ void ASpartaSurvivalGameState::AddPlayerHP(float Amount)
 }
 void ASpartaSurvivalGameState::AddPlayerAttackPoint(float Amount)
 {
-    PlayerAttackPoint += (int32)Amount;
 
-    UE_LOG(LogTemp, Warning, TEXT("공격력 변동: +%f | 현재 총 공격력: %d"), Amount, PlayerAttackPoint);
 }
-
