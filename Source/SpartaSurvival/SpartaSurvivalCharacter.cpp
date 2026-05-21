@@ -10,6 +10,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "SpartaSurvivalGameState.h"
 #include "Kismet/GameplayStatics.h"  // 발소리 재생에 사용
 
 //총기 사용 해더
@@ -643,6 +644,11 @@ void ASpartaSurvivalCharacter::SetUseLeftHandIK(bool bBlock)
 {
 	bUseLeftHandIK = bBlock;
 }
+//데미지 받기
+float ASpartaSurvivalCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	
+	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
 void ASpartaSurvivalCharacter::Throw()
 {
@@ -659,3 +665,14 @@ void ASpartaSurvivalCharacter::ReadyToThrow()
 	}
 }
 
+	if (GetWorld())
+	{
+		ASpartaSurvivalGameState* GS = Cast<ASpartaSurvivalGameState>(GetWorld()->GetGameState());
+		if (GS)
+		{
+			GS->AddPlayerHP(-ActualDamage);
+			UE_LOG(LogTemp, Warning, TEXT("플레이어 피격! 데미지: %f | 현재 체력: %f"), ActualDamage, GS->CurrentHP);
+		}
+	}
+	return ActualDamage;
+}
