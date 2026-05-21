@@ -198,3 +198,4 @@ void AEnemyBase::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
         AIC->ChasePlayer();
     }
 }
+
