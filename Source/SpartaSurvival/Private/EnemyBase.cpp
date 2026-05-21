@@ -96,7 +96,7 @@ void AEnemyBase::Die()
 
 void AEnemyBase::OnDeathAnimationFinished()
 {
-    if (!IsPendingKillPending())
+    if (IsValid(this))
     {
         Destroy();
     }
