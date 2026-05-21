@@ -29,19 +29,32 @@ float AEnemyBase::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent
 {
     if (EnemyState == EEnemyState::Death) return 0.f;
 
-    float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+   
+    float FinalDamage = DamageAmount;
 
-    FPointDamageEvent* PointDamageEvent = (FPointDamageEvent*)&DamageEvent;
-
-    if (PointDamageEvent)
+   
+    if (DamageEvent.IsOfType(FPointDamageEvent::ClassID))
     {
-        if (PointDamageEvent->HitInfo.BoneName == FName("Head"))
+       
+        const FPointDamageEvent* PointDamageEvent = static_cast<const FPointDamageEvent*>(&DamageEvent);
+
+        if (PointDamageEvent)
         {
-            ActualDamage *= 3.0f;
-            UE_LOG(LogTemp, Warning, TEXT("헤드샷!!!"));
+            
+            if (PointDamageEvent->HitInfo.BoneName.ToString().ToLower() == TEXT("Head"))
+            {
+                FinalDamage *= 3.0f;
+                UE_LOG(LogTemp, Warning, TEXT("💥 헤드샷!!! 3배 데미지 적용: %f"), FinalDamage);
+            }
         }
     }
+
+   
+    float ActualDamage = Super::TakeDamage(FinalDamage, DamageEvent, EventInstigator, DamageCauser);
+
+    
     CurrentHP = FMath::Clamp(CurrentHP - ActualDamage, 0.f, MaxHP);
+    UE_LOG(LogTemp, Log, TEXT("[%s] 남은 체력: %f / %f"), *GetName(), CurrentHP, MaxHP);
 
     if (CurrentHP <= 0.f)
     {

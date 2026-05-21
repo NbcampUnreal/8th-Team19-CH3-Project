@@ -324,6 +324,7 @@ void AAssultRifle::FireOnce()
 			//데미지 처리 총기 line
 			if (HitEnemy)
 			{
+				UE_LOG(LogTemp, Warning, TEXT("[3] EnemyBase 캐스팅 성공! 데미지를 줍니다. 데미지 양: %f"), DamagePerBullet);
 				FPointDamageEvent PointDamageEvent;
 				PointDamageEvent.Damage = DamagePerBullet;
 				PointDamageEvent.HitInfo = HitResult;
@@ -339,6 +340,7 @@ void AAssultRifle::FireOnce()
 		else
 		{
 			LastHitActor = nullptr; //충돌 없으면 null로 초기화	
+			UE_LOG(LogTemp, Error, TEXT("❌ [레이 충돌 실패] 아무것도 맞추지 못했습니다. 허공이거나 콜리전 통과됨."));
 		}
 
 
