@@ -346,7 +346,7 @@ void AShotgun::Reload()
 
 	if (CurrentCharacter)
 	{
-		CurrentCharacter->SetBlockLeftHandIK(true);
+		CurrentCharacter->SetUseLeftHandIK(true);
 	}
 
 	if (GunMesh && GunReloadAnimation)
@@ -388,7 +388,7 @@ void AShotgun::EndReload()
 
 	if (CurrentCharacter)
 	{
-		CurrentCharacter->SetBlockLeftHandIK(false);
+		CurrentCharacter->SetUseLeftHandIK(true);
 	}
 
 

@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// character cpp
 
 #include "SpartaSurvivalCharacter.h"
 #include "Engine/LocalPlayer.h"
@@ -18,7 +18,8 @@
 #include "Shotgun.h"
 #include "AssultRifle.h"
 #include "UObject/ConstructorHelpers.h"
-
+#include "ThrowableBase.h"
+#include "Grenade.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -63,13 +64,13 @@ ASpartaSurvivalCharacter::ASpartaSurvivalCharacter()
 	MovComp->BrakingDecelerationWalking = 2000.f;
 	MovComp->BrakingDecelerationFalling = 1500.f;
 	MovComp->NavAgentProps.bCanCrouch = true;  // 언리얼 내장 크라우치 활성화
-	MovComp->NavAgentProps.bCanCrouch   = true;          // 언리얼 내장 크라우치 활성화
+	MovComp->NavAgentProps.bCanCrouch = true;          // 언리얼 내장 크라우치 활성화
 
 	// ─── 카메라 붐 ─────────────────────────────────────────────────
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->TargetArmLength = 400.f;
-	CameraBoom->TargetArmLength         = 400.f;
+	CameraBoom->TargetArmLength = 400.f;
 	CameraBoom->bUsePawnControlRotation = true; // 컨트롤러(마우스)에 따라 붐 회전
 
 	// ─── 팔로우 카메라 ─────────────────────────────────────────────
@@ -95,6 +96,15 @@ ASpartaSurvivalCharacter::ASpartaSurvivalCharacter()
 	{
 		AssultRifleBP = AssultRifleClass.Class;
 	}
+
+	//grenade bp
+	static ConstructorHelpers::FClassFinder<AGrenade> GrenadeClass(
+		TEXT("/Game/Blueprints/BP_Grenade")
+	);
+	if (GrenadeClass.Succeeded())
+	{
+		GrenadeBP = GrenadeClass.Class;
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -116,9 +126,7 @@ void ASpartaSurvivalCharacter::BeginPlay()
 	AdjustCapsuleSize();
 	ApplyMovementSpeed();
 
-	//총기 캐릭터가 진짜로 보이게 드는 곳
-	if (!AssultRifleBP) return;
-
+	//현재 장착하고 있는 액터
 	FActorSpawnParameters Params;
 	Params.Owner = this;
 	Params.Instigator = this;
@@ -129,8 +137,16 @@ void ASpartaSurvivalCharacter::BeginPlay()
 		GetActorRotation(),
 		Params
 	);
-
 	SpawnedAssultRifle->EquipToCharacter(this);
+
+	//투척물 bp로
+	AGrenade* SpawnedGrenade = GetWorld()->SpawnActor<AGrenade>(
+		GrenadeBP,
+		GetActorLocation(),
+		GetActorRotation(),
+		Params
+	);
+	SpawnedGrenade->EquipToCharacter(this);
 }
 
 void ASpartaSurvivalCharacter::Tick(float DeltaTime)
@@ -212,7 +228,7 @@ void ASpartaSurvivalCharacter::SetupPlayerInputComponent(UInputComponent* Player
 	if (UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
 		// ── 점프 ──────────────────────────────────────────────────
-		EIC->BindAction(JumpAction, ETriggerEvent::Started,   this, &ACharacter::Jump);
+		EIC->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
 		EIC->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 
 		// ── 이동 ──────────────────────────────────────────────────
@@ -225,28 +241,28 @@ void ASpartaSurvivalCharacter::SetupPlayerInputComponent(UInputComponent* Player
 		// ── 달리기 (Shift) ────────────────────────────────────────
 		if (SprintAction)
 		{
-			EIC->BindAction(SprintAction, ETriggerEvent::Started,   this, &ASpartaSurvivalCharacter::StartSprint);
+			EIC->BindAction(SprintAction, ETriggerEvent::Started, this, &ASpartaSurvivalCharacter::StartSprint);
 			EIC->BindAction(SprintAction, ETriggerEvent::Completed, this, &ASpartaSurvivalCharacter::StopSprint);
 		}
 		else
 		{
 			UE_LOG(LogTemplateCharacter, Warning,
 				TEXT("[%s] SprintAction이 설정되지 않았습니다. "
-				     "에디터에서 SprintAction Input Action 에셋을 할당해 주세요."),
+					"에디터에서 SprintAction Input Action 에셋을 할당해 주세요."),
 				*GetNameSafe(this));
 		}
 
 		// ── 앉기 (Ctrl) ───────────────────────────────────────────
 		if (CrouchAction)
 		{
-			EIC->BindAction(CrouchAction, ETriggerEvent::Started,   this, &ASpartaSurvivalCharacter::StartCrouch);
+			EIC->BindAction(CrouchAction, ETriggerEvent::Started, this, &ASpartaSurvivalCharacter::StartCrouch);
 			EIC->BindAction(CrouchAction, ETriggerEvent::Completed, this, &ASpartaSurvivalCharacter::StopCrouch);
 		}
 		else
 		{
 			UE_LOG(LogTemplateCharacter, Warning,
 				TEXT("[%s] CrouchAction이 설정되지 않았습니다. "
-				     "에디터에서 CrouchAction Input Action 에셋을 할당해 주세요."),
+					"에디터에서 CrouchAction Input Action 에셋을 할당해 주세요."),
 				*GetNameSafe(this));
 		}
 
@@ -271,6 +287,12 @@ void ASpartaSurvivalCharacter::SetupPlayerInputComponent(UInputComponent* Player
 		if (MeleeAction)
 		{
 			EIC->BindAction(MeleeAction, ETriggerEvent::Started, this, &ASpartaSurvivalCharacter::Melee);
+		}
+
+		if (ThrowAction)
+		{
+			EIC->BindAction(ThrowAction, ETriggerEvent::Started, this, &ASpartaSurvivalCharacter::ReadyToThrow);
+			EIC->BindAction(ThrowAction, ETriggerEvent::Completed, this, &ASpartaSurvivalCharacter::Throw);
 		}
 	}
 	else
@@ -298,10 +320,10 @@ void ASpartaSurvivalCharacter::Move(const FInputActionValue& Value)
 		// 컨트롤러 Yaw 방향 기준으로 전/우 벡터를 계산합니다.
 		const FRotator YawRotation(0.f, Controller->GetControlRotation().Yaw, 0.f);
 		const FVector  ForwardDir = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-		const FVector  RightDir   = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+		const FVector  RightDir = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 
 		AddMovementInput(ForwardDir, MovementVector.Y);
-		AddMovementInput(RightDir,   MovementVector.X);
+		AddMovementInput(RightDir, MovementVector.X);
 	}
 }
 
@@ -319,7 +341,7 @@ void ASpartaSurvivalCharacter::StopMove()
 {
 	//bWeaponMovePose = false;
 	bHasMovementInput = false;
-	bIsMovingForward  = false;
+	bIsMovingForward = false;
 }
 
 void ASpartaSurvivalCharacter::StartSprint()
@@ -438,9 +460,9 @@ void ASpartaSurvivalCharacter::UpdateMovementState()
 
 	// ── 수평 이동 속력 계산 ───────────────────────────────────────
 	FVector Velocity = GetVelocity();
-	Velocity.Z       = 0.f;
-	CurrentSpeed     = Velocity.Size();
-	bIsMoving        = CurrentSpeed > 10.f;
+	Velocity.Z = 0.f;
+	CurrentSpeed = Velocity.Size();
+	bIsMoving = CurrentSpeed > 10.f;
 
 	// ── 언리얼 내장 크라우치 상태를 직접 읽습니다 ─────────────────
 	bIsCrouching = bIsCrouched;
@@ -544,10 +566,16 @@ void ASpartaSurvivalCharacter::Landed(const FHitResult& Hit)
 
 //총기 액션 함수들 ───────────────────────────────────────
 
-void ASpartaSurvivalCharacter::SetEquippedGun(ADefaultGun* ToBeEquippedGun)
+void ASpartaSurvivalCharacter::SetEquippedThrowable(AThrowableBase* NewThrowable)
 {
-	EquippedGun = ToBeEquippedGun;
+	EquippedThrowable = NewThrowable;
 }
+void ASpartaSurvivalCharacter::SetEquippedGun(ADefaultGun* NewGun)
+{
+	EquippedGun = NewGun;
+}
+
+
 void ASpartaSurvivalCharacter::Fire()
 {
 	if (EquippedGun)
@@ -611,9 +639,23 @@ void ASpartaSurvivalCharacter::Melee()
 	}
 }
 
-void ASpartaSurvivalCharacter::SetBlockLeftHandIK(bool bBlock)
+void ASpartaSurvivalCharacter::SetUseLeftHandIK(bool bBlock)
 {
-	bBlockLeftHandIK = bBlock;
+	bUseLeftHandIK = bBlock;
 }
 
+void ASpartaSurvivalCharacter::Throw()
+{
+	if (EquippedThrowable)
+	{
+		EquippedThrowable->Throw(false);
+	}
+}
+void ASpartaSurvivalCharacter::ReadyToThrow()
+{
+	if (EquippedThrowable)
+	{
+		EquippedThrowable->Throw(true);
+	}
+}
 

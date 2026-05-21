@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+﻿// assult rifle cpp
 #include "AssultRifle.h"
 #include "GameFramework/PlayerController.h"
 #include "Camera/PlayerCameraManager.h"
@@ -20,7 +20,7 @@ AAssultRifle::AAssultRifle()
 	PrimaryActorTick.bCanEverTick = true;
 
 	ZoomMultiplier = 1.4f;
-	ReloadDuration = 1.5f;
+	ReloadDuration = 2.f;
 	MaxAmmo = 32;
 	MaxRecoil = static_cast<float>(MaxAmmo) * RecoilPerShot;
 	CurrentAmmo = MaxAmmo;
@@ -79,8 +79,15 @@ AAssultRifle::AAssultRifle()
 
 	//zoom cam
 
-	ZoomCamPosition = CreateDefaultSubobject<USceneComponent>(TEXT("ZoomCamPoint"));
-	ZoomCamPosition->SetupAttachment(GunMesh);
+	ScopeCamPoint = CreateDefaultSubobject<USceneComponent>(TEXT("ScopeCamPoint"));
+	ScopeCamPoint->SetupAttachment(GunMesh);
+
+	ScopeMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ScopeMesh"));
+	ScopeMesh->SetupAttachment(GunMesh);
+	ScopeMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	ScopeMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
+	ScopeMesh->SetGenerateOverlapEvents(false);
+
 }
 void AAssultRifle::Tick(float DeltaTime)
 {
@@ -93,11 +100,65 @@ void AAssultRifle::Tick(float DeltaTime)
 
 	if (!PlayerController) return;
 
-	if (!bIsTriggerHeld && CurrentRecoil > 0.f) 
-	{ 
-		float RecoverRecoil = FMath::Min(CurrentRecoil, RecoilRecoverySpeed * DeltaTime); 
-		CurrentRecoil -= RecoverRecoil; 
-		PlayerController->AddPitchInput(RecoverRecoil); 
+	if (CurrentCharacter && CurrentCharacter->GetFollowCamera() && ScopeCamPoint)
+	{
+		UCameraComponent* FollowCamera = CurrentCharacter->GetFollowCamera();
+		USceneComponent* CameraParent = FollowCamera->GetAttachParent();
+
+		if (CameraParent)
+		{
+			if (bIsScoped && !bIsReloading)
+			{
+				FTransform ParentSocketTransform = CameraParent->GetSocketTransform(
+					FollowCamera->GetAttachSocketName(),
+					ERelativeTransformSpace::RTS_World
+				);
+				FVector ScopeLocation = ScopeCamPoint->GetComponentLocation();
+				//scope위치를 camera parent 기준 Relative 위치로 변환
+				FVector TargetRelativeLocation = ParentSocketTransform.InverseTransformPosition(ScopeLocation);
+				//보간
+				FVector NewRelativeLocation = FMath::VInterpTo(
+					FollowCamera->GetRelativeLocation(),
+					TargetRelativeLocation,
+					DeltaTime,
+					ScopeCameraInterpSpeed
+				);
+				//지정
+				FollowCamera->SetRelativeLocation(NewRelativeLocation);
+				FRotator CameraRot = FollowCamera->GetComponentRotation();
+				FRotator OffsetRot = FRotator(0.f, 90.f, 0.f);
+
+				GunMesh->SetWorldRotation((FQuat(CameraRot) * FQuat(OffsetRot)).Rotator());
+				SupportPoint->SetRelativeLocation(FVector(-4.362456f, -7.89851f, -5.0));
+			}
+			else if (bSavedScopeCamera)
+			{
+				GunMesh->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));
+				FVector NewRelativeLocation = FMath::VInterpTo(
+					FollowCamera->GetRelativeLocation(),
+					DefaultCameraRelativeLocation,
+					DeltaTime,
+					ScopeCameraInterpSpeed
+				);
+				FollowCamera->SetRelativeLocation(NewRelativeLocation);
+				SupportPoint->SetRelativeLocation(FVector(-4.362456f, -7.89851f, 4.017956f));
+
+				//원래 위치에 거의 도달했는지 
+				if (FVector::Dist(NewRelativeLocation, DefaultCameraRelativeLocation) < 1.f)
+				{
+					FollowCamera->SetRelativeLocation(DefaultCameraRelativeLocation);
+					bSavedScopeCamera = false;
+				}
+			}
+		}
+	}
+
+	//recoil 복구하기
+	if (CurrentRecoil > 0.f && !bIsTriggerHeld)
+	{
+		float RecoverRecoil = FMath::Min(CurrentRecoil, RecoilRecoverySpeed * DeltaTime);
+		CurrentRecoil -= RecoverRecoil;
+		PlayerController->AddPitchInput(RecoverRecoil);
 	}
 }
 void AAssultRifle::ShowCrosshair()
@@ -251,7 +312,7 @@ void AAssultRifle::FireOnce()
 			ShotDirection.GetSafeNormal(),
 			FMath::DegreesToRadians(SpreadAngle)
 		);
-		
+
 		FVector EndPoint = StartPoint + FinalShotDirection * AssultRifleRange;
 
 		FCollisionQueryParams CollisionParameters;
@@ -270,28 +331,7 @@ void AAssultRifle::FireOnce()
 			CollisionParameters
 		);
 
-		DrawDebugLine(GetWorld(), MuzzlePoint->GetComponentLocation(), EndPoint, FColor::Red, false, 1.f, 0, 2.f);
-
-		if (bHit && HitResult.GetActor())
-		{
-			AEnemyBase* Enemy = Cast<AEnemyBase>(HitResult.GetActor());
-
-			if (Enemy)
-			{
-				FVector BulletDirection = (EndPoint - StartPoint).GetSafeNormal();
-
-				UGameplayStatics::ApplyPointDamage(
-					Enemy,
-					DamagePerBullet,
-					BulletDirection,
-					HitResult,
-					CurrentCharacter->GetController(),
-					this,
-					UDamageType::StaticClass()
-				);
-
-			}
-		}
+		//DrawDebugLine(GetWorld(), MuzzlePoint->GetComponentLocation(), EndPoint, FColor::Red, false, 1.f, 0, 2.f);
 
 		ApplyRecoil(PlayerController);
 
@@ -382,7 +422,7 @@ void AAssultRifle::Fire()
 	if (!bIsTriggerHeld)
 	{
 		bRecoveringRecoil = false;          // 복구 중단
-		SavedCameraRot= PlayerController->GetControlRotation(); // 현재 위치 저장
+		SavedCameraRot = PlayerController->GetControlRotation(); // 현재 위치 저장
 	}
 
 	bIsTriggerHeld = true;
@@ -415,10 +455,12 @@ void AAssultRifle::Reload()
 
 	bIsReloading = true;
 	CanFire = false;
+	bIsScoped = false;
+	CurrentCharacter->GetFollowCamera()->SetFieldOfView(90.f);
 
 	if (CurrentCharacter)
 	{
-		CurrentCharacter->SetBlockLeftHandIK(true);
+		CurrentCharacter->SetUseLeftHandIK(false);
 	}
 
 	if (ReloadSound)
@@ -458,9 +500,22 @@ void AAssultRifle::EndReload()
 	CanFire = true;
 	bIsReloading = false;
 
+	if (bIsHoldingScope)
+	{
+		DefaultCameraRelativeLocation = CurrentCharacter->GetFollowCamera()->GetRelativeLocation();
+		bSavedScopeCamera = true;
+		bIsScoped = true;
+		CurrentCharacter->GetFollowCamera()->SetFieldOfView(55.f);
+	}
+	else
+	{
+		bIsScoped = false;
+		CurrentCharacter->GetFollowCamera()->SetFieldOfView(90.f);
+	}
+
 	if (CurrentCharacter)
 	{
-		CurrentCharacter->SetBlockLeftHandIK(false);
+		CurrentCharacter->SetUseLeftHandIK(true);
 	}
 
 	SpawnMagazine();
@@ -473,13 +528,32 @@ void AAssultRifle::Zoom(bool bIsZoom)
 
 	if (!CurrentCharacter || !CurrentCharacter->GetFollowCamera()) return;
 
+	UCameraComponent* FollowCamera = CurrentCharacter->GetFollowCamera();
+
+	bIsHoldingScope = bIsZoom;
+
+	if (bIsReloading)
+	{
+		bIsScoped = false;
+		FollowCamera->SetFieldOfView(90.f);
+		return;
+	}
+
+
 	if (bIsZoom)
 	{
+		if (!bSavedScopeCamera)
+		{
+			DefaultCameraRelativeLocation = FollowCamera->GetRelativeLocation();
+			bSavedScopeCamera = true;
+		}
+		bIsHoldingScope = true;
 		bIsScoped = true;
 		CurrentCharacter->GetFollowCamera()->SetFieldOfView(55.f);
 	}
 	else
 	{
+		bIsHoldingScope = false;
 		bIsScoped = false;
 		CurrentCharacter->GetFollowCamera()->SetFieldOfView(90.f);
 	}

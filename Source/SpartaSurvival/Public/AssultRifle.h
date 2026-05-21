@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+﻿// ar h
 
 #pragma once
 
@@ -138,10 +138,26 @@ private:
 	FRotator SavedCameraRot;
 	bool bRecoveringRecoil;
 
-protected:
-	UPROPERTY(EditAnywhere, Category = "Cam")
-	USceneComponent* ZoomCamPosition;
+public:
+	UPROPERTY(BlueprintReadOnly, Category = "Scope")
 	bool bIsScoped = false;
+protected:
+
+	UPROPERTY(EditAnywhere, Category = "Cam")
+	USceneComponent* ScopeCamPoint;
+	UPROPERTY()
+	FVector DefaultCameraRelativeLocation;
+	// 기본 카메라 위치를 저장했는지
+	UPROPERTY()
+	bool bSavedScopeCamera = false;
+	// 카메라가 스코프 위치로 이동/복귀하는 속도
+	UPROPERTY(EditAnywhere, Category = "Scope")
+	float ScopeCameraInterpSpeed = 10.f;
+
+	UPROPERTY(EditAnywhere, Category = "Scope")
+	UStaticMeshComponent* ScopeMesh;
+
+	bool bIsHoldingScope = false;
 
 public:
 	virtual void Tick(float DeltaTime) override;

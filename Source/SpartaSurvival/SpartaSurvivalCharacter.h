@@ -1,5 +1,3 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -19,6 +17,8 @@ class USceneComponent;
 class ADefaultGun;
 class AShotgun;
 class AAssultRifle;
+class AThrowableBase;
+class AGrenade;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
@@ -37,7 +37,7 @@ enum class EMovementState : uint8
 	Falling    UMETA(DisplayName = "Falling"),
 };
 
-UCLASS(config=Game)
+UCLASS(config = Game)
 class ASpartaSurvivalCharacter : public ACharacter
 {
 	GENERATED_BODY()
@@ -276,8 +276,8 @@ public:
 
 
 
-//총기 관련 프로퍼티와 함수들
-//총기 액션
+	//총기 관련 프로퍼티와 함수들
+	//총기 액션
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")
 	UInputMappingContext* WeaponMappingContext;
@@ -291,6 +291,8 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")
 	UInputAction* MeleeAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Throwable")
+	UInputAction* ThrowAction;
 public:
 
 	//손붙이기 왼손
@@ -301,16 +303,14 @@ public:
 	bool bUseLeftHandIK = false;
 
 public:
-	void SetEquippedGun(ADefaultGun* NewGun);
-
 	USceneComponent* GetWeaponSocket() const { return WeaponSocket; }
 	//USceneComponent* GetSupportSocket() const { return SupportSocket; }
 
 	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "Gun")
 	AShotgun* StartingShotgun = nullptr;
 
-	void SetBlockLeftHandIK(bool bBlock);
-	bool bBlockLeftHandIK = false;
+	void SetUseLeftHandIK(bool bBlock);
+	//bool bBlockLeftHandIK = false;
 
 protected:
 	//샷건 bp 
@@ -327,9 +327,17 @@ protected:
 	//component
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")
 	USceneComponent* WeaponSocket = nullptr;
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gun")
-	//USceneComponent* SupportSocket = nullptr;
 
+	//현재 장착된 투척물
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Throwable")
+	AThrowableBase* EquippedThrowable = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Throwable")
+	TSubclassOf<AGrenade> GrenadeBP;
+
+public:
+	void SetEquippedThrowable(AThrowableBase* NewThrowable);
+	void SetEquippedGun(ADefaultGun* NewGun);
 
 	// 총기 액션 함수들 
 	void Fire();
@@ -338,6 +346,9 @@ protected:
 	void StartZoom();
 	void EndZoom();
 	void Melee();
+
+	void ReadyToThrow();
+	void Throw();
 
 private:
 	//bool bWeaponMovePose = false;
