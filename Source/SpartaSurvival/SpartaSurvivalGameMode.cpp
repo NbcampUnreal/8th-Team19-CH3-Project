@@ -30,7 +30,7 @@ ASpartaSurvivalGameMode::ASpartaSurvivalGameMode()
 	AccumulatedSeconds = 0;
 	CurrentStage = 1;
 	
-	//스테이지 타임 나중에 수정
+	//스테이지 타임 나중에 수정//일단 1분
 	StageTime = 10;
 
 
@@ -207,7 +207,7 @@ void ASpartaSurvivalGameMode::HandleMainTimerElapsed()
 		{
 
 			int32 BeforeLevel = GS->PlayerLevel;
-
+			GS->AddPlayerEXP(10.f);
 			if (GS->PlayerLevel > BeforeLevel)
 			{
 				ASpartaSurvivalPlayerController* PC = Cast<ASpartaSurvivalPlayerController>(GetWorld()->GetFirstPlayerController());

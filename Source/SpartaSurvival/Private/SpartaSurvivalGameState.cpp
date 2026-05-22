@@ -26,10 +26,10 @@ void ASpartaSurvivalGameState::AddPlayerEXP(float Amount)
         CurrentEXP -= MaxEXP; // 남은 경험치 이월
 
         PlayerLevel++;        // 1. 레벨 증가
-        MaxHP += 20.f;        // 2. 최대 체력 20 증가 (원하는 수치로 조절 가능)
+       // MaxHP += 20.f;        // 2. 최대 체력 20 증가 (원하는 수치로 조절 가능)
         CurrentHP = MaxHP;    // 3. 레벨업 보상으로 체력 풀피 회복
         PlayerAttackPoint *= 1.2f;
-        MaxEXP *= 1.3f;       // 4. 다음 레벨업에 필요한 경험치 통 늘리기 (30% 증가)
+       // MaxEXP *= 1.3f;       // 4. 다음 레벨업에 필요한 경험치 통 늘리기 (30% 증가)
 
         // 로그창에 레벨업 확인용 출력
         UE_LOG(LogTemp, Warning, TEXT("Level Up! Current Level: %d, MaxHP: %f"), PlayerLevel, MaxHP);
