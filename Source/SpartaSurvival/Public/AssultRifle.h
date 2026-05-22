@@ -34,6 +34,8 @@ private:
 	void EndMelee();
 
 	float AssultRifleRange;
+	//총기 공격력
+	UPROPERTY(BlueprintReadOnly, Category = "GunStats", meta = (AllowPrivateAccess = "true"))
 	float DamagePerBullet;
 	float SpreadAngle;
 

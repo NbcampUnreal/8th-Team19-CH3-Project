@@ -31,9 +31,10 @@ public:
 
     void SpawnLogic(FVector SpawnCenter);
 
+    TArray<TSubclassOf<AEnemyBase>> WaveSpawnQueue;
+
 private:
     FTimerHandle SpawnTimerHandle;
-    TArray<TSubclassOf<AEnemyBase>> WaveSpawnQueue;
     FVector LastSpawnCenter;
 
 };

@@ -15,8 +15,8 @@ ASpartaSurvivalPlayerController::ASpartaSurvivalPlayerController()
 	, MainMenuWidgetInstance(nullptr)
 	, HUDWidgetClass(nullptr)
 	, HUDWidgetInstance(nullptr)
-	, DamageWidgetClass(nullptr)
-	, DamageWidgetInstance(nullptr)
+	//, DamageWidgetClass(nullptr)
+	//, DamageWidgetInstance(nullptr)
 	, PauseMenuWidgetClass(nullptr)
 	, PauseMenuWidgetInstance(nullptr)
 	, LevelUpWidgetClass(nullptr)
@@ -50,6 +50,8 @@ UUserWidget* ASpartaSurvivalPlayerController::GetHUDWidget() const
 {
 	return HUDWidgetInstance;
 }
+
+//메인 메뉴
 void ASpartaSurvivalPlayerController::ShowMainMenu(bool bIsRestart)
 {
 	// HUD가 켜져 있다면 닫기
@@ -79,6 +81,7 @@ void ASpartaSurvivalPlayerController::ShowMainMenu(bool bIsRestart)
 	}
 
 }
+//게임시작
 void ASpartaSurvivalPlayerController::ShowGameHUD()
 {
 	// 1. 기존에 떠 있던 메뉴 위젯 찌꺼기 완벽하게 청소
@@ -119,6 +122,8 @@ void ASpartaSurvivalPlayerController::ShowPauseMenu()
 {
 
 }
+
+/// 레벨업
 void ASpartaSurvivalPlayerController::ShowLevelUp()
 {
 	
@@ -146,6 +151,7 @@ void ASpartaSurvivalPlayerController::ShowLevelUp()
 		SetInputMode(InputMode);
 	}
 }
+//게임오버
 void ASpartaSurvivalPlayerController::ShowGameOver()
 {
 	
@@ -180,7 +186,7 @@ void ASpartaSurvivalPlayerController::ShowGameOver()
 		}
 	}
 }
-
+//게임클리어
 void ASpartaSurvivalPlayerController::ShowGameClear()
 {
 	if (HUDWidgetInstance)
@@ -212,6 +218,25 @@ void ASpartaSurvivalPlayerController::ShowGameClear()
 			InputMode.SetWidgetToFocus(GameClearWidgetInstance->GetCachedWidget());
 			SetInputMode(InputMode);
 		}
+	}
+}
+//데미지 구현
+void ASpartaSurvivalPlayerController::ShowDamageText(FVector WorldLocation)
+{
+	if (!DamageWidgetClass) return;
+
+	UUserWidget* DamageWidget = CreateWidget<UUserWidget>(this, DamageWidgetClass);
+	if (DamageWidget)
+	{
+
+		WorldLocation.Z += 50.f;
+		FVector2D ScreenPosition;
+		// 3D 좌표를 2D 화면 좌표로 변환하여 위젯 위치 설정
+		if (ProjectWorldLocationToScreen(WorldLocation, ScreenPosition))
+		{
+			DamageWidget->SetPositionInViewport(ScreenPosition);
+		}
+		DamageWidget->AddToViewport();
 	}
 }
 

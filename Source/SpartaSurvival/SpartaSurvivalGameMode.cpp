@@ -11,6 +11,7 @@
 #include "SpartaSurvivalPlayerController.h"
 #include "BossZombie.h"
 #include "Engine/World.h"
+#include "EnemySpawnComponent.h"
 
 
 ASpartaSurvivalGameMode::ASpartaSurvivalGameMode()
@@ -159,8 +160,8 @@ void ASpartaSurvivalGameMode::GameOver()
         }
     }
 }
-//클리어 수정중
-void ASpartaSurvivalGameMode::GameClear(int32 inCurrentStage)
+//클리어 수정중 노드로 만듬
+/*void ASpartaSurvivalGameMode::GameClear(int32 inCurrentStage)
 {
 
 	if (inCurrentStage == 7)
@@ -178,7 +179,7 @@ void ASpartaSurvivalGameMode::GameClear(int32 inCurrentStage)
 
 		}
 	}
-}
+}*/
 
 
 //나중에 수정
@@ -204,128 +205,83 @@ void ASpartaSurvivalGameMode::HandleMainTimerElapsed()
 		ASpartaSurvivalGameState* GS = Cast<ASpartaSurvivalGameState>(GetWorld()->GetGameState());
 		if (GS)
 		{
-			// 1. [1초마다] 체력 10 감소, 경험치 10 증가
-			//GS->AddPlayerHP(-10.f);
-			
+
 			int32 BeforeLevel = GS->PlayerLevel;
-			//GS->AddPlayerEXP(10.f);
+
 			if (GS->PlayerLevel > BeforeLevel)
 			{
 				ASpartaSurvivalPlayerController* PC = Cast<ASpartaSurvivalPlayerController>(GetWorld()->GetFirstPlayerController());
 				if (PC)
 				{
-					
+
 					PC->ShowLevelUp();
 				}
 			}
 
-			// 2. [3초마다] 체력 50 회복, 점수 1점 증가 (3의 배수 초 일 때)
-			if (AccumulatedSeconds % 3 == 0)
-			{
-			//	GS->AddPlayerHP(50.f);
-				GS->AddScore(1);
 
-				UE_LOG(LogTemp, Warning, TEXT("[3초 주기] HP 50 회복 및 1점 획득! 현재 총점: %d"), GS->CurrentScore);
+		}
+	}
+	if (AccumulatedSeconds > 0)
+	{
+		
+		if (EnemySpawnComp && SpawnPoints.Num() > 0)
+		{
+			int32 CurrentQueueCount = EnemySpawnComp->WaveSpawnQueue.Num();
+			for (int32 i = 0; i < CurrentQueueCount; ++i)
+			{
+				int32 RandIdx = FMath::RandRange(0, SpawnPoints.Num() - 1);
+				if (SpawnPoints[RandIdx] != nullptr)
+				{
+					FVector SpawnPos = SpawnPoints[RandIdx]->GetActorLocation();
+					EnemySpawnComp->SpawnLogic(SpawnPos);
+				}
 			}
 		}
-	}
-
-	if (AccumulatedSeconds % 2 == 0)
-	{
-		if (EnemySpawnComp)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("체크 - 남은 마릿수: %d, 포인트 개수: %d"),
-				EnemySpawnComp->RemainingMonsters, SpawnPoints.Num());
-		}
 		
-		if (EnemySpawnComp && EnemySpawnComp->RemainingMonsters > 0 && SpawnPoints.Num() > 0)
+
+
+
+		if (AccumulatedSeconds % StageTime == 0)
 		{
-			int32 RandIdx = FMath::RandRange(0, SpawnPoints.Num() - 1);
-			FVector SpawnPos = SpawnPoints[RandIdx]->GetActorLocation();
+			if (CurrentStage < 3)
+			{
+				CurrentStage += 1;
 
-			
-			EnemySpawnComp->SpawnLogic(SpawnPos);
+				UE_LOG(LogTemp, Error, TEXT("⏰ [시간 경과] %d 웨이브 전환 신호 발생!"), CurrentStage);
+
+				// 변경된 CurrentStage 숫자를 그대로 토스
+				Gamelevel(CurrentStage);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[최종 웨이브] 현재 5스테이지 보스전 유지 중 (시간: %d초)"), AccumulatedSeconds);
+			}
 		}
-	}
-
-	if (AccumulatedSeconds % StageTime == 0)
-	{
-		CurrentStage += 1;
-		Gamelevel(CurrentStage);
-		GameClear(CurrentStage);
 	}
 }
 
 //게임 난이도( 적스폰이랑 맞춰보겠습니다)
 void ASpartaSurvivalGameMode::Gamelevel(int32 inCurrentStage)
 {
-
-	if (inCurrentStage == 9)
-	{
-		GetWorldTimerManager().PauseTimer(MainTimerHandle);
-
-
-		//SpawnBoss();
-
-		return;
-	}
 	CurrentStage = inCurrentStage;
 
-	if (EnemySpawnComp)
-	{
-		
-		EnemySpawnComp->StartWave(CurrentStage);
+	
+	if (!EnemySpawnComp) return;
 
-		
-		int32 DifficultyMultiplier = CurrentStage;
+	
+	EnemySpawnComp->StartWave(inCurrentStage);
 
-		
-		EnemySpawnComp->RemainingMonsters = EnemySpawnComp->RemainingMonsters * DifficultyMultiplier;
-
-		UE_LOG(LogTemp, Warning, TEXT("난이도 상승! %d 스테이지 좀비 물량 자동으로 %d배 증가 완료 (총 %d마리)"),
-			CurrentStage, DifficultyMultiplier, EnemySpawnComp->RemainingMonsters);
-	}
-
+	UE_LOG(LogTemp, Warning, TEXT("📢 GameMode가 %d 스테이지 명령을 Component로 성공적으로 전달했습니다!"), inCurrentStage);
 }
 
-//서브
-/*int32 AmountPerSpawn = 1 + (InCurrentStage / 3);
 
-// 3. 타이머 재설정 
-GetWorldTimerManager().SetTimer(SpawnTimerHandle, [this, AmountPerSpawn]()
+
+
+/*	if (EnemySpawnComp && EnemySpawnComp->RemainingMonsters > 0 && SpawnPoints.Num() > 0)
 	{
-		// 정해진 양만큼 반복 소환
-		for (int32 i = 0; i < AmountPerSpawn; i++)
-		{
-			SpawnEnemy();
-		}
-	}, NewInterval, true);
+		int32 RandIdx = FMath::RandRange(0, SpawnPoints.Num() - 1);
+		FVector SpawnPos = SpawnPoints[RandIdx]->GetActorLocation();
 
-UE_LOG(LogTemp, Warning, TEXT("난이도 상승! 주기: %.2f초 | 한 번에 %d마리 소환"), NewInterval, AmountPerSpawn);
-}*/
 
-/*void ASpartaSurvivalGameMode::SpawnBoss()
-{
-	UWorld* World = GetWorld();
-	if (World)
-	{
-		// 스폰할 위치와 회전값 설정
-		FVector SpawnLocation(0.0f, 0.0f, 100.0f); // 원하는 좌표로 변경하세요
-		FRotator SpawnRotation = FRotator::ZeroRotator;
-
-		// 강제 소환 끼임방지
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-
-		// ABossZombie 스폰 실행
-		ABossZombie* SpawnBoss = World->SpawnActor<ABossZombie>(ABossZombie::StaticClass(), SpawnLocation, SpawnRotation, SpawnParams);
-
-		if (SpawnBoss)
-		{
-		//	SpawnBoss->OnBossDeath.AddDynamic(this, &ASpartaSurvivalGameMode::GameClear);
-			// 스폰 성공 후 처리할 로직 (예: UI 표시, 로그 출력 등)
-			UE_LOG(LogTemp, Warning, TEXT("보스 좀비가 성공적으로 호출되었습니다!"));
-		}
-	}
-}*/
-
+		EnemySpawnComp->SpawnLogic(SpawnPos);
+	}*/

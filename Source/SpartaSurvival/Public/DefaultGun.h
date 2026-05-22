@@ -35,7 +35,9 @@ public:
 	float MeleeDuration;
 	float MeleeRange;
 	
+	UPROPERTY(BlueprintReadOnly, Category = "Ammo")
 	int32 MaxAmmo;      // 최대 총알 수
+	UPROPERTY(BlueprintReadOnly, Category = "Ammo")
 	int32 CurrentAmmo;  // 현재/남은 총알 수
 
 	bool CanFire;

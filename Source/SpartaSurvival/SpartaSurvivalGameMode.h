@@ -1,7 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #pragma once
-
+#include "EnemyWaveData.h"
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
 #include "SpartaSurvivalGameMode.generated.h"
@@ -22,8 +22,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "GameSystem")
 	void GameOver();
 
-	UFUNCTION(BlueprintCallable, Category = "GameSystem")
-	void GameClear(int32 inCurrentStage);
+	//UFUNCTION(BlueprintCallable, Category = "GameSystem")
+	//void GameClear(int32 inCurrentStage);
 
 	//점수
 	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GameData")
@@ -38,22 +38,15 @@ public:
 	UPROPERTY()
 	TArray<AActor*> SpawnPoints;
 
-
-	/*// 보스가 등장할 특정 위치
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LevelDesign|Boss")
-	FVector BossSpawnLocation;*/
-
-	//void SpawnBoss();
-
 protected:
 
 	virtual void BeginPlay() override;
 
 	//virtual void Tick(float DeltaSeconds) override;
 
-	// --- UI 관련 변수 (나중에 UI 담당자가 사용할 슬롯) ---
-	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
-	//TSubclassOf<class UUserWidget> GameOverWidgetClass;
+	//난이도 관련
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wave")
+	UDataTable* EnemyWaveTable;
 
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 

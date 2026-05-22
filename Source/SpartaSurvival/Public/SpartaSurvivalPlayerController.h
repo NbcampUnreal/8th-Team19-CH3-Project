@@ -43,11 +43,11 @@ public:
     UUserWidget* HUDWidgetInstance;
 
     // // 데미지 UI
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Damage")
+   /** UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Damage")
     TSubclassOf<UUserWidget> DamageWidgetClass;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
-    UUserWidget* DamageWidgetInstance;
+    UUserWidget* DamageWidgetInstance;*/
 
     // // 일시정지 메뉴 UI
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Pause")
@@ -77,6 +77,11 @@ public:
     //게임클리어
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GameClear")
     UUserWidget* GameClearWidgetInstance;
+    
+    //적 피격 확인
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage")
+    TSubclassOf<class UUserWidget> DamageWidgetClass;
+    void ShowDamageText(FVector WorldLocation);
 
     UFUNCTION(BlueprintPure, Category = "HUD")
     UUserWidget* GetHUDWidget() const;

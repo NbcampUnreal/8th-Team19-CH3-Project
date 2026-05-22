@@ -10,7 +10,7 @@
 
 ASpartaSurvivalGameState::ASpartaSurvivalGameState()
 {
-    PlayerLevel = 2;
+    PlayerLevel = 1;
     CurrentHP = MaxHP;
     CurrentEXP = 0.f;
     PlayerAttackPoint = 100.0f;

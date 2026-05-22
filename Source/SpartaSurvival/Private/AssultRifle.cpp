@@ -12,6 +12,7 @@
 #include "GameFramework/DamageType.h"
 #include "EnemyBase.h"
 #include "Kismet/GameplayStatics.h"
+#include "SpartaSurvivalPlayerController.h"
 
 
 
@@ -375,7 +376,13 @@ void AAssultRifle::FireOnce()
 					CurrentCharacter ? CurrentCharacter->GetController() : nullptr;
 
 				HitEnemy->TakeDamage(DamagePerBullet, PointDamageEvent, InstigatorController, this);
+
+				if (ASpartaSurvivalPlayerController* MyPC = Cast<ASpartaSurvivalPlayerController>(InstigatorController))
+				{
+					MyPC->ShowDamageText(HitResult.ImpactPoint); 
+				}
 			}
+			
 		}
 		else
 		{
