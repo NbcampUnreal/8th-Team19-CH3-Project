@@ -25,6 +25,18 @@ void AThrowableBase::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 }
+
+void AThrowableBase::StartExplosionTimer()
+{
+	GetWorldTimerManager().SetTimer(
+		ExplosionTimerHandle,
+		this,
+		&AThrowableBase::Explode,
+		ExplosionDelay,
+		false
+	);
+}
+
 void AThrowableBase::Charging()
 {
 	if (!GetWorld()) return;
@@ -142,8 +154,10 @@ void AThrowableBase::ThrowReleased()
 	}
 
 	Primitive->AddImpulse(ThrowDirection * ThrowPower, NAME_None, true); //throw
+	StartExplosionTimer();
 
 	ThrowChargeTime = 0.f;
+
 }
 
 void AThrowableBase::Throw(bool bReadyToThrow)

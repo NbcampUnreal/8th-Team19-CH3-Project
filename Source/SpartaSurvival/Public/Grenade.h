@@ -7,7 +7,8 @@
 #include "Grenade.generated.h"
 
 class ASpartaSurvivalCharacter;
-
+class UNiagaraSystem;
+class USoundBase;
 
 UCLASS()
 class SPARTASURVIVAL_API AGrenade : public AThrowableBase
@@ -21,4 +22,10 @@ public:
 	virtual void Explode() override;
 	virtual void EquipToCharacter(ASpartaSurvivalCharacter* Character) override;
 	//	virtual void OnHit() override;
+
+	UPROPERTY(EditAnywhere, Category = "Explosion")
+	UNiagaraSystem* ExplosionEffect;
+
+	UPROPERTY(EditAnywhere, Category = "Explosion")
+	USoundBase* ExplosionSound;
 };

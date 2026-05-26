@@ -60,4 +60,13 @@ public:
 	void Charging();
 	FTimerHandle ChargingTimerHandle;
 
+
+	//explosion
+	void StartExplosionTimer();
+
+	UPROPERTY(EditAnywhere, Category = "Explosion")
+	float ExplosionDelay = 3.f;
+
+	FTimerHandle ExplosionTimerHandle;
+
 };
