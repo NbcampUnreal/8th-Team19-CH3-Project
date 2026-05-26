@@ -2,6 +2,10 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+
+#include "Animation/AnimInstance.h"
+#include "Animation/AnimMontage.h"
+
 #include "Camera/CameraComponent.h"
 #include "Logging/LogMacros.h"
 #include "SpartaSurvivalCharacter.generated.h"
@@ -332,9 +336,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Throwable")
 	AThrowableBase* EquippedThrowable = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Throwable")
-	TSubclassOf<AGrenade> GrenadeBP;
-
 public:
 	void SetEquippedThrowable(AThrowableBase* NewThrowable);
 	void SetEquippedGun(ADefaultGun* NewGun);
@@ -347,8 +348,19 @@ public:
 	void EndZoom();
 	void Melee();
 
+	//throwable
+	UPROPERTY(EditAnywhere, Category = "Throwable")
+	UAnimMontage* ThrowMontage;
+	void AttachGrenadeToHand();
+	void SpawnNewThrowable();
 	void ReadyToThrow();
 	void Throw();
+
+
+	int32 GrenadeCount = 0;
+	int32 GetGrenadeCount() { return GrenadeCount; }
+	void AddGrenade() { GrenadeCount += 1; }
+	void DecreaseGrenade() { GrenadeCount -= 1; }
 
 private:
 	//bool bWeaponMovePose = false;

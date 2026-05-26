@@ -14,6 +14,8 @@
 #include "Kismet/GameplayStatics.h"  // 발소리 재생에 사용
 
 //총기 사용 해더
+#include "Engine/World.h"
+#include "Engine/StaticMesh.h"
 #include "Components/SceneComponent.h"
 #include "DefaultGun.h"
 #include "Shotgun.h"
@@ -31,6 +33,9 @@ ASpartaSurvivalCharacter::ASpartaSurvivalCharacter()
 {
 	// Tick 활성화 (매 프레임 상태 갱신에 필요)
 	PrimaryActorTick.bCanEverTick = true;
+
+	//수류탄count 기본 개수 
+	GrenadeCount = 3;
 
 	//총기 잡는 그립 소캣생성
 	WeaponSocket = CreateDefaultSubobject<USceneComponent>(TEXT("GripPoint"));
@@ -98,14 +103,6 @@ ASpartaSurvivalCharacter::ASpartaSurvivalCharacter()
 		AssultRifleBP = AssultRifleClass.Class;
 	}
 
-	//grenade bp
-	static ConstructorHelpers::FClassFinder<AGrenade> GrenadeClass(
-		TEXT("/Game/Blueprints/BP_Grenade")
-	);
-	if (GrenadeClass.Succeeded())
-	{
-		GrenadeBP = GrenadeClass.Class;
-	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -139,15 +136,6 @@ void ASpartaSurvivalCharacter::BeginPlay()
 		Params
 	);
 	SpawnedAssultRifle->EquipToCharacter(this);
-
-	//투척물 bp로
-	AGrenade* SpawnedGrenade = GetWorld()->SpawnActor<AGrenade>(
-		GrenadeBP,
-		GetActorLocation(),
-		GetActorRotation(),
-		Params
-	);
-	SpawnedGrenade->EquipToCharacter(this);
 }
 
 void ASpartaSurvivalCharacter::Tick(float DeltaTime)
@@ -166,23 +154,6 @@ void ASpartaSurvivalCharacter::Tick(float DeltaTime)
 	FVector CurrentOffset = CameraBoom->GetRelativeLocation();
 	float SmoothedZ = FMath::FInterpTo(CurrentOffset.Z, TargetCameraZ, DeltaTime, CrouchCameraInterpSpeed);
 	CameraBoom->SetRelativeLocation(FVector(CurrentOffset.X, CurrentOffset.Y, SmoothedZ));
-
-	//if (WeaponSocket)
-	//{
-	//	FRotator TargetRot = WeaponBaseRot; 
-	//	if (bIsInAir) { TargetRot = WeaponJumpOffsetRot + WeaponBaseRot; }
-	//	else if (bWeaponMovePose) { TargetRot = WeaponMoveOffsetRot + WeaponBaseRot; }
-	//	else TargetRot = WeaponBaseRot;
-
-	//	WeaponSocket->SetRelativeRotation(
-	//		FMath::RInterpTo(
-	//			WeaponSocket->GetRelativeRotation(),
-	//			TargetRot,
-	//			DeltaTime,
-	//			WeaponRotInterpSpeed
-	//		)
-	//	);
-	//}
 
 	//왼손 붙이기
 	if (AAssultRifle* AssultRifle = Cast<AAssultRifle>(EquippedGun))
@@ -576,6 +547,49 @@ void ASpartaSurvivalCharacter::SetEquippedGun(ADefaultGun* NewGun)
 	EquippedGun = NewGun;
 }
 
+void ASpartaSurvivalCharacter::AttachGrenadeToHand()
+{
+	if (!EquippedThrowable || !GetMesh()) return;
+
+	if (EquippedThrowable->ThrowableMesh)
+	{
+		EquippedThrowable->ThrowableMesh->SetSimulatePhysics(false);
+		EquippedThrowable->ThrowableMesh->SetEnableGravity(false);
+		EquippedThrowable->ThrowableMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+
+	EquippedThrowable->AttachToComponent(
+		GetMesh(),
+		FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+		TEXT("hand_l")
+	);
+
+	EquippedThrowable->SetActorRelativeLocation(FVector(0.f, 0.f, 0.f));
+	EquippedThrowable->SetActorRelativeRotation(FRotator(0.f, 0.f, 0.f));
+}
+
+void ASpartaSurvivalCharacter::SpawnNewThrowable()
+{
+	FActorSpawnParameters Params;
+	Params.Owner = this;
+	Params.Instigator = this;
+
+	if (GrenadeCount < 1) return;
+
+	DecreaseGrenade();
+
+	AGrenade* SpawnedGrenade = GetWorld()->SpawnActor<AGrenade>(
+		AGrenade::StaticClass(),
+		this->GetActorLocation(),
+		this->GetActorRotation(),
+		Params
+	);
+
+	SetEquippedThrowable(SpawnedGrenade);
+	SpawnedGrenade->ThrowableMesh->SetHiddenInGame(true);
+
+}
+
 
 void ASpartaSurvivalCharacter::Fire()
 {
@@ -647,11 +661,27 @@ void ASpartaSurvivalCharacter::Throw()
 {
 	if (EquippedThrowable)
 	{
+		bUseLeftHandIK = false;
+		EquippedThrowable->ThrowableMesh->SetHiddenInGame(false);
+		AttachGrenadeToHand();
+
+		if (ThrowMontage && GetMesh())
+		{
+			if (UAnimInstance* Anim = GetMesh()->GetAnimInstance())
+			{
+				Anim->Montage_Play(ThrowMontage, 1.0f);
+			}
+		}
+
 		EquippedThrowable->Throw(false);
+
+		EquippedThrowable = nullptr;
+		bUseLeftHandIK = true;
 	}
 }
 void ASpartaSurvivalCharacter::ReadyToThrow()
 {
+	SpawnNewThrowable();
 	if (EquippedThrowable)
 	{
 		EquippedThrowable->Throw(true);

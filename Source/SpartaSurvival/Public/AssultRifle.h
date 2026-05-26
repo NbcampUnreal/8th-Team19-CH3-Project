@@ -12,13 +12,13 @@
 #include "Animation/AnimMontage.h"
 #include "CoreMinimal.h"
 #include "DefaultGun.h"
+#include "TimerManager.h"
 #include "AssultRifle.generated.h"
 
 
 
 class EnemyBase;
 class ASpartaSurvivalCharacter;
-class TimerManager;
 
 UCLASS()
 class SPARTASURVIVAL_API AAssultRifle : public ADefaultGun
@@ -152,7 +152,13 @@ protected:
 	// 기본 카메라 위치를 저장했는지
 	UPROPERTY()
 	bool bSavedScopeCamera = false;
-	// 카메라가 스코프 위치로 이동/복귀하는 속도
+	// 카메라가 스코프 위치로 이동/복귀
+	void RecoverCam();
+	void ZoomCam();
+
+	FTimerHandle RecoverZoomTimerHandle;
+	FTimerHandle ZoomTimerHandle;
+
 	UPROPERTY(EditAnywhere, Category = "Scope")
 	float ScopeCameraInterpSpeed = 10.f;
 
@@ -171,5 +177,7 @@ public:
 
 	bool IsReloading() const { return bIsReloading; }
 	bool IsCanFire() const { return CanFire; }
+
+	void SetRifleMeshVisible(bool bVisible);
 
 };

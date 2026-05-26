@@ -42,7 +42,7 @@ public:
 
 	bool CanFire;
 	
-protected:
+public:
 	//총기 블루프린트 컴포넌트
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gun")
 	USceneComponent* GunRoot;

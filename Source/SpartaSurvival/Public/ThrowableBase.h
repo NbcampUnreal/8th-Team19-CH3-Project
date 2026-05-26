@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "TimerManager.h"
 #include "GameFramework/Actor.h"
 #include "ThrowableBase.generated.h"
 
@@ -16,7 +17,7 @@ class SPARTASURVIVAL_API AThrowableBase : public AActor
 {
 	GENERATED_BODY()
 
-protected:
+public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Throwable")
 	USceneComponent* ThrowableRoot;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Throwable")
@@ -55,5 +56,8 @@ public:
 	virtual void Explode();
 	virtual void EquipToCharacter(ASpartaSurvivalCharacter* Character);
 	ASpartaSurvivalCharacter* CurrentCharacter;
+
+	void Charging();
+	FTimerHandle ChargingTimerHandle;
 
 };

@@ -12,7 +12,7 @@
 // Sets default values
 AThrowableBase::AThrowableBase()
 {
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 
 	ThrowableRoot = CreateDefaultSubobject<USceneComponent>(TEXT("ThrowableRoot"));
 	SetRootComponent(ThrowableRoot);
@@ -20,70 +20,90 @@ AThrowableBase::AThrowableBase()
 	ThrowableMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ThrowableMesh"));
 	ThrowableMesh->SetupAttachment(ThrowableRoot);
 }
-
 void AThrowableBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	UE_LOG(LogTemp, Warning, TEXT("Charging Tick"));
 
-	if (!bIsChargingThrow)  return;
-	//power
-	//G를 누르고 있는 동안 Tick에서 ThrowChargeTime이 계속 증가 시
-	ThrowChargeTime += DeltaTime;
+}
+void AThrowableBase::Charging()
+{
+	if (!GetWorld()) return;
+	GetWorldTimerManager().ClearTimer(ChargingTimerHandle);
 
-	float ChargeRatio = FMath::Clamp(ThrowChargeTime / MaxChargeTime, 0.f, 1.f);
-	float CurrentThrowPower = FMath::Lerp(MinThrowPower, MaxThrowPower, ChargeRatio);
+	GetWorld()->GetTimerManager().SetTimer(
+		ChargingTimerHandle,
+		[this]()
+		{
+			if (!bIsChargingThrow)
+			{
+				GetWorldTimerManager().ClearTimer(ChargingTimerHandle);
+				return;
+			}
+			
+			const float DeltaTime = GetWorld()->GetDeltaSeconds();
+			ThrowChargeTime += DeltaTime;
 
-	APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
-	if (!PlayerController) return;
+			float ChargeRatio = FMath::Clamp(ThrowChargeTime / MaxChargeTime, 0.f, 1.f);
+			float CurrentThrowPower = FMath::Lerp(MinThrowPower, MaxThrowPower, ChargeRatio);
 
-	FVector CharacterLocation;
-	FRotator CharacterRotation;
-	PlayerController->GetPlayerViewPoint(CharacterLocation, CharacterRotation);
+			APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
+			if (!PlayerController) return;
 
-	//debugline
-	FVector ThrowDirection = CharacterRotation.Vector();
+			FVector CharacterLocation;
+			FRotator CharacterRotation;
+			PlayerController->GetPlayerViewPoint(CharacterLocation, CharacterRotation);
 
-	//character collision 회피
-	FVector StartPoint = GetActorLocation() + ThrowDirection * 80.f + FVector(0.f, 0.f, 20.f);
-	FVector LaunchVelocity = ThrowDirection * CurrentThrowPower; //velocity vector
-	float GravityZ = GetWorld()->GetGravityZ();
+			//debugline
+			FVector ThrowDirection = CharacterRotation.Vector();
 
-	const int32 SegmentCount = 30;
-	const float TimeStep = 0.07f;
+			ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner());
+			if (!OwnerCharacter || !OwnerCharacter->GetMesh()) return;
 
-	FVector PreviousPoint = StartPoint;
+			FVector StartPoint =
+				OwnerCharacter->GetMesh()->GetSocketLocation(TEXT("hand_r"));
 
-	for (int32 i = 1; i <= SegmentCount; i++)
-	{
-		float Time = i * TimeStep;
+			FVector LaunchVelocity = ThrowDirection * CurrentThrowPower; //velocity vector
+			float GravityZ = GetWorld()->GetGravityZ();
 
-		FVector CurrentPoint =
-			StartPoint
-			+ LaunchVelocity * Time
-			+ FVector(0.f, 0.f, 0.5f * GravityZ * Time * Time);
+			const int32 SegmentCount = 30;
+			const float TimeStep = 0.07f;
 
-		DrawDebugLine(
-			GetWorld(),
-			PreviousPoint,
-			CurrentPoint,
-			FColor::Green,
-			false,
-			0.05f,
-			0,
-			3.f
-		);
+			FVector PreviousPoint = StartPoint;
 
-		PreviousPoint = CurrentPoint;
-	}
+			for (int32 i = 1; i <= SegmentCount; i++)
+			{
+				float Time = i * TimeStep;
+
+				FVector CurrentPoint =
+					StartPoint
+					+ LaunchVelocity * Time
+					+ FVector(0.f, 0.f, 0.5f * GravityZ * Time * Time);
+
+				DrawDebugLine(
+					GetWorld(),
+					PreviousPoint,
+					CurrentPoint,
+					FColor::Green,
+					false,
+					0.0f,
+					0,
+					3.f
+				);
+
+				PreviousPoint = CurrentPoint;
+			}
+		},
+		.016f,
+		true
+	);
 }
 void AThrowableBase::ThrowPressed()
 {
-	UE_LOG(LogTemp, Warning, TEXT("ThrowPressed Called"));
 	if (bIsChargingThrow) return; //이미 던지는 중일경우 return
 
 	bIsChargingThrow = true;
 	ThrowChargeTime = 0.f; //reset
+	Charging();
 }
 //던지는 힘 물리 계산
 void AThrowableBase::ThrowReleased()
@@ -97,17 +117,16 @@ void AThrowableBase::ThrowReleased()
 	float ChargeRatio = FMath::Clamp(ThrowChargeTime / MaxChargeTime, 0.f, 1.f);
 	float ThrowPower = FMath::Lerp(MinThrowPower, MaxThrowPower, ChargeRatio);
 
-	//physics
-	if (!SpawnedThrowable) return;
-
-	UPrimitiveComponent* Primitive = SpawnedThrowable->ThrowableMesh;
+	UPrimitiveComponent* Primitive = ThrowableMesh;
 	if (!Primitive) return;
 
-	SpawnedThrowable->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+	ThrowableMesh->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
 
-	Primitive->SetSimulatePhysics(true);
-	Primitive->SetEnableGravity(true);
+	Primitive->SetMobility(EComponentMobility::Movable);
+	Primitive->SetCollisionProfileName(TEXT("PhysicsActor"));
 	Primitive->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	Primitive->SetSimulatePhysics(true); 
+	Primitive->SetEnableGravity(true);
 	Primitive->WakeRigidBody();
 
 	FVector ThrowDirection = GetActorForwardVector(); //pc 실패전 보험
@@ -125,7 +144,6 @@ void AThrowableBase::ThrowReleased()
 	Primitive->AddImpulse(ThrowDirection * ThrowPower, NAME_None, true); //throw
 
 	ThrowChargeTime = 0.f;
-	SpawnedThrowable = nullptr;
 }
 
 void AThrowableBase::Throw(bool bReadyToThrow)

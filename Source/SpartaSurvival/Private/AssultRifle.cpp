@@ -13,7 +13,7 @@
 #include "EnemyBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "SpartaSurvivalPlayerController.h"
-
+#include "TimelineComponent.generated.h"
 
 
 AAssultRifle::AAssultRifle()
@@ -101,59 +101,6 @@ void AAssultRifle::Tick(float DeltaTime)
 
 	if (!PlayerController) return;
 
-	if (CurrentCharacter && CurrentCharacter->GetFollowCamera() && ScopeCamPoint)
-	{
-		UCameraComponent* FollowCamera = CurrentCharacter->GetFollowCamera();
-		USceneComponent* CameraParent = FollowCamera->GetAttachParent();
-
-		if (CameraParent)
-		{
-			if (bIsScoped && !bIsReloading)
-			{
-				FTransform ParentSocketTransform = CameraParent->GetSocketTransform(
-					FollowCamera->GetAttachSocketName(),
-					ERelativeTransformSpace::RTS_World
-				);
-				FVector ScopeLocation = ScopeCamPoint->GetComponentLocation();
-				//scope위치를 camera parent 기준 Relative 위치로 변환
-				FVector TargetRelativeLocation = ParentSocketTransform.InverseTransformPosition(ScopeLocation);
-				//보간
-				FVector NewRelativeLocation = FMath::VInterpTo(
-					FollowCamera->GetRelativeLocation(),
-					TargetRelativeLocation,
-					DeltaTime,
-					ScopeCameraInterpSpeed
-				);
-				//지정
-				FollowCamera->SetRelativeLocation(NewRelativeLocation);
-				FRotator CameraRot = FollowCamera->GetComponentRotation();
-				FRotator OffsetRot = FRotator(0.f, 90.f, 0.f);
-
-				GunMesh->SetWorldRotation((FQuat(CameraRot) * FQuat(OffsetRot)).Rotator());
-				SupportPoint->SetRelativeLocation(FVector(-4.362456f, -7.89851f, -5.0));
-			}
-			else if (bSavedScopeCamera)
-			{
-				GunMesh->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));
-				FVector NewRelativeLocation = FMath::VInterpTo(
-					FollowCamera->GetRelativeLocation(),
-					DefaultCameraRelativeLocation,
-					DeltaTime,
-					ScopeCameraInterpSpeed
-				);
-				FollowCamera->SetRelativeLocation(NewRelativeLocation);
-				SupportPoint->SetRelativeLocation(FVector(-4.362456f, -7.89851f, 4.017956f));
-
-				//원래 위치에 거의 도달했는지 
-				if (FVector::Dist(NewRelativeLocation, DefaultCameraRelativeLocation) < 1.f)
-				{
-					FollowCamera->SetRelativeLocation(DefaultCameraRelativeLocation);
-					bSavedScopeCamera = false;
-				}
-			}
-		}
-	}
-
 	//recoil 복구하기
 	if (CurrentRecoil > 0.f && !bIsTriggerHeld)
 	{
@@ -161,6 +108,96 @@ void AAssultRifle::Tick(float DeltaTime)
 		CurrentRecoil -= RecoverRecoil;
 		PlayerController->AddPitchInput(RecoverRecoil);
 	}
+}
+void AAssultRifle::ZoomCam()
+{
+	if (!CurrentCharacter || !GetWorld()) return;
+
+	GetWorld()->GetTimerManager().ClearTimer(RecoverZoomTimerHandle);
+	GetWorld()->GetTimerManager().ClearTimer(ZoomTimerHandle);
+
+	GetWorld()->GetTimerManager().SetTimer(ZoomTimerHandle, [this]()
+		{
+			UCameraComponent* FollowCamera = CurrentCharacter->GetFollowCamera();
+			if (!FollowCamera) return;
+			USceneComponent* CameraParent = FollowCamera->GetAttachParent();
+
+			if (bIsReloading) return;
+			const float DeltaTime = GetWorld()->GetDeltaSeconds();
+
+			if (CameraParent)
+			{
+				if (bIsScoped && !bIsReloading)
+				{
+					FTransform ParentSocketTransform = CameraParent->GetSocketTransform(
+						FollowCamera->GetAttachSocketName(),
+						ERelativeTransformSpace::RTS_World
+					);
+					FVector ScopeLocation = ScopeCamPoint->GetComponentLocation();
+					//scope위치를 camera parent 기준 Relative 위치로 변환
+					FVector TargetRelativeLocation = ParentSocketTransform.InverseTransformPosition(ScopeLocation);
+					//보간
+					FVector NewRelativeLocation = FMath::VInterpTo(
+						FollowCamera->GetRelativeLocation(),
+						TargetRelativeLocation,
+						DeltaTime,
+						ScopeCameraInterpSpeed
+					);
+					//지정
+					FollowCamera->SetRelativeLocation(NewRelativeLocation);
+					FRotator CameraRot = FollowCamera->GetComponentRotation();
+					FRotator OffsetRot = FRotator(0.f, 90.f, 0.f);
+
+					GunMesh->SetWorldRotation((FQuat(CameraRot) * FQuat(OffsetRot)).Rotator());
+					SupportPoint->SetRelativeLocation(FVector(-4.362456f, -7.89851f, -5.0));
+				}
+			}
+		},
+		.016f,
+		true
+	);
+}
+void AAssultRifle::RecoverCam()
+{
+	if (!CurrentCharacter || !GetWorld()) return;
+
+	GetWorld()->GetTimerManager().ClearTimer(RecoverZoomTimerHandle);
+	GetWorld()->GetTimerManager().ClearTimer(ZoomTimerHandle);
+
+	GetWorld()->GetTimerManager().SetTimer(RecoverZoomTimerHandle, [this]()
+		{
+			UCameraComponent* FollowCamera = CurrentCharacter->GetFollowCamera();
+			if (!FollowCamera) return;
+			USceneComponent* CameraParent = FollowCamera->GetAttachParent();
+
+			if (bIsReloading) return;
+			const float DeltaTime = GetWorld()->GetDeltaSeconds();
+			if (CameraParent)
+			{
+				if (bSavedScopeCamera)
+				{
+					GunMesh->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));
+					FVector NewRelativeLocation = FMath::VInterpTo(
+						FollowCamera->GetRelativeLocation(),
+						DefaultCameraRelativeLocation,
+						DeltaTime,
+						ScopeCameraInterpSpeed
+					);
+					FollowCamera->SetRelativeLocation(NewRelativeLocation);
+					SupportPoint->SetRelativeLocation(FVector(-4.362456f, -7.89851f, 4.017956f));
+					//원래 위치에 거의 도달했는지 
+					if (FVector::Dist(NewRelativeLocation, DefaultCameraRelativeLocation) < 1.f)
+					{
+						FollowCamera->SetRelativeLocation(DefaultCameraRelativeLocation);
+						GetWorld()->GetTimerManager().ClearTimer(RecoverZoomTimerHandle);
+						bSavedScopeCamera = false;
+					}
+				}
+			}
+		},
+		.016f,
+		true
+	);
 }
 void AAssultRifle::ShowCrosshair()
 {
@@ -557,12 +594,16 @@ void AAssultRifle::Zoom(bool bIsZoom)
 		bIsHoldingScope = true;
 		bIsScoped = true;
 		CurrentCharacter->GetFollowCamera()->SetFieldOfView(55.f);
+
+		ZoomCam();
 	}
 	else
 	{
 		bIsHoldingScope = false;
 		bIsScoped = false;
 		CurrentCharacter->GetFollowCamera()->SetFieldOfView(90.f);
+
+		RecoverCam();
 	}
 }
 

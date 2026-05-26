@@ -15,12 +15,8 @@ class SPARTASURVIVAL_API AGrenade : public AThrowableBase
 	GENERATED_BODY()
 public:
 	AGrenade();
-
-	int32 CurrentGrenadeCount;
-	int32 GetCurrentGrenadeCount() { return CurrentGrenadeCount; }
-
-	void AddGrenade() { CurrentGrenadeCount += 1; }
-	void UseGrenade() { CurrentGrenadeCount -= 1; }
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Throwable")
+	TSubclassOf<AGrenade> GrenadeBP;
 
 	virtual void Explode() override;
 	virtual void EquipToCharacter(ASpartaSurvivalCharacter* Character) override;
