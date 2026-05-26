@@ -9,6 +9,13 @@
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
 
+#include "EnemyBase.h"
+#include "DrawDebugHelpers.h"
+#include "Engine/OverlapResult.h"
+#include "GameFramework/Controller.h"
+#include "Engine/DamageEvents.h"
+
+#include "Sound/SoundBase.h"
 #include "UObject/ConstructorHelpers.h"
 
 AGrenade::AGrenade()
@@ -38,6 +45,15 @@ AGrenade::AGrenade()
 	ThrowableMesh->SetSimulatePhysics(false);
 	ThrowableMesh->SetEnableGravity(false);
 	ThrowableMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	static ConstructorHelpers::FObjectFinder<USoundBase> ExplosionSoundAsset(
+		TEXT("/Game/GunMeshes/ExlpodedSound.ExlpodedSound")
+	);
+
+	if (ExplosionSoundAsset.Succeeded())
+	{
+		ExplosionSound = ExplosionSoundAsset.Object;
+	}
 }
 
 void AGrenade::Explode()
@@ -69,6 +85,36 @@ void AGrenade::Explode()
 			ExplosionSound,
 			Loc
 		);
+	}
+
+
+	TArray<FOverlapResult> Overlaps;
+
+	FCollisionQueryParams QueryParams;
+	QueryParams.AddIgnoredActor(this);
+
+	bool bHit = GetWorld()->OverlapMultiByChannel(Overlaps, Loc, FQuat::Identity, ECC_Pawn,
+	FCollisionShape::MakeSphere(ExplosionRadius), QueryParams);
+
+	if (bHit)
+	{
+		//데미지를 이미 받은 Actor 목록
+		TSet<AActor*> DamagedActors;
+		for (const FOverlapResult& Result : Overlaps)
+		{
+			AEnemyBase* HitEnemy = Cast<AEnemyBase>(Result.GetActor());
+			if (!HitEnemy) continue;
+			if (DamagedActors.Contains(HitEnemy)) continue;
+
+			DamagedActors.Add(HitEnemy);
+
+			FDamageEvent DamageEvent;
+
+			AController* InstigatorController =
+				GetInstigator() ? GetInstigator()->GetController() : nullptr;
+
+			HitEnemy->TakeDamage(ExplosionDamage, DamageEvent, InstigatorController, this);
+		}
 	}
 
 	Destroy();

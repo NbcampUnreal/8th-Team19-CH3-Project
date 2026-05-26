@@ -11,6 +11,7 @@ class ASpartaSurvivalCharacter;
 class UProjectileMovementComponent;
 class StaticMeshCompoent;
 class USceneComponent;
+class USoundBase;
 
 UCLASS()
 class SPARTASURVIVAL_API AThrowableBase : public AActor
@@ -60,7 +61,6 @@ public:
 	void Charging();
 	FTimerHandle ChargingTimerHandle;
 
-
 	//explosion
 	void StartExplosionTimer();
 
@@ -68,5 +68,11 @@ public:
 	float ExplosionDelay = 3.f;
 
 	FTimerHandle ExplosionTimerHandle;
+
+	UPROPERTY(EditAnywhere, Category = "Sound")
+	USoundBase* PinPullSound;
+
+	FTimerHandle StopTimerHandle;
+	void StopRolling();
 
 };

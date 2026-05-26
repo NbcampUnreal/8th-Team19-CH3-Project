@@ -4,9 +4,13 @@
 #include "../SpartaSurvivalCharacter.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SceneComponent.h"
+
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/GameplayStaticsTypes.h"
+
+#include "Sound/SoundBase.h"
+#include "UObject/ConstructorHelpers.h"
 
 
 // Sets default values
@@ -19,6 +23,16 @@ AThrowableBase::AThrowableBase()
 
 	ThrowableMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ThrowableMesh"));
 	ThrowableMesh->SetupAttachment(ThrowableRoot);
+
+	static ConstructorHelpers::FObjectFinder<USoundBase> PinSoundAsset(
+		TEXT("/Game/GunMeshes/PinPullSound.PinPullSound")
+	);
+
+	if (PinSoundAsset.Succeeded())
+	{
+		PinPullSound = PinSoundAsset.Object;
+	}
+
 }
 void AThrowableBase::Tick(float DeltaTime)
 {
@@ -36,7 +50,11 @@ void AThrowableBase::StartExplosionTimer()
 		false
 	);
 }
-
+void AThrowableBase::StopRolling()
+{
+	ThrowableMesh->SetPhysicsLinearVelocity(FVector::ZeroVector);
+	ThrowableMesh->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
+}
 void AThrowableBase::Charging()
 {
 	if (!GetWorld()) return;
@@ -113,6 +131,15 @@ void AThrowableBase::ThrowPressed()
 {
 	if (bIsChargingThrow) return; //이미 던지는 중일경우 return
 
+	if (PinPullSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(
+			this,
+			PinPullSound,
+			GetActorLocation()
+		);
+	}
+
 	bIsChargingThrow = true;
 	ThrowChargeTime = 0.f; //reset
 	Charging();
@@ -153,8 +180,20 @@ void AThrowableBase::ThrowReleased()
 		ThrowDirection = CharacterRotation.Vector();
 	}
 
+	// 빠른 물체 충돌 관통 방지
+	Primitive->SetUseCCD(true);
+	Primitive->WakeAllRigidBodies();
 	Primitive->AddImpulse(ThrowDirection * ThrowPower, NAME_None, true); //throw
+	
 	StartExplosionTimer();
+
+	GetWorldTimerManager().SetTimer(
+		StopTimerHandle,
+		this,
+		&AThrowableBase::StopRolling,
+		0.2f,
+		false
+	);
 
 	ThrowChargeTime = 0.f;
 

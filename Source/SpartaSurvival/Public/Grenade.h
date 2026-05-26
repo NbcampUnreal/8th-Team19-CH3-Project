@@ -28,4 +28,11 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Explosion")
 	USoundBase* ExplosionSound;
+
+	UPROPERTY(EditAnywhere, Category = "Explosion")
+	float ExplosionRadius = 250.f;
+
+	UPROPERTY(EditAnywhere, Category = "Explosion")
+	float ExplosionDamage = 75.f;
+
 };
