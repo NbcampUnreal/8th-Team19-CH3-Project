@@ -112,6 +112,9 @@ void ASpartaSurvivalCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	//tick 보정
+	GetMesh()->PrimaryComponentTick.AddPrerequisite(this, PrimaryActorTick);
+
 	// ── 앉기 캡슐 크기를 CharacterMovement에 주입 ─────────────────
 	// 언리얼 내장 Crouch()는 CharacterMovement->CrouchedHalfHeight 값을 기준으로
 	// 캡슐을 자동 조정합니다. UPROPERTY 값을 여기서 덮어써 커스텀 크기가 적용되도록 합니다.
@@ -158,14 +161,12 @@ void ASpartaSurvivalCharacter::Tick(float DeltaTime)
 	//왼손 붙이기
 	if (AAssultRifle* AssultRifle = Cast<AAssultRifle>(EquippedGun))
 	{
-		if (AssultRifle->GetSupportPoint())
+		if (EquippedGun->SupportPoint)
 		{
-			FVector WorldLoc = AssultRifle->GetSupportPoint()->GetComponentLocation();
+			FVector WorldLoc = EquippedGun->SupportPoint->GetComponentLocation();
 
 			LeftHandIKLocation =
 				GetMesh()->GetComponentTransform().InverseTransformPosition(WorldLoc);
-
-			bUseLeftHandIK = true;
 		}
 	}
 	else
@@ -545,6 +546,7 @@ void ASpartaSurvivalCharacter::SetEquippedThrowable(AThrowableBase* NewThrowable
 void ASpartaSurvivalCharacter::SetEquippedGun(ADefaultGun* NewGun)
 {
 	EquippedGun = NewGun;
+	bUseLeftHandIK = true;
 }
 
 void ASpartaSurvivalCharacter::AttachGrenadeToHand()
