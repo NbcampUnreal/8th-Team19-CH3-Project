@@ -3,6 +3,7 @@
 
 #include "SpartaSurvivalGameState.h"
 #include "SpartaSurvival/SpartaSurvivalGameMode.h"
+#include "SpartaSurvivalPlayerController.h"
 
 
 
@@ -18,6 +19,9 @@ ASpartaSurvivalGameState::ASpartaSurvivalGameState()
 
 void ASpartaSurvivalGameState::AddPlayerEXP(float Amount)
 {
+    
+    int32 BeforeLevel = PlayerLevel;
+
     CurrentEXP += Amount;
 
     // 경험치가 목표치(MaxEXP)를 넘으면 레벨업 처리
@@ -34,6 +38,14 @@ void ASpartaSurvivalGameState::AddPlayerEXP(float Amount)
         // 로그창에 레벨업 확인용 출력
         UE_LOG(LogTemp, Warning, TEXT("Level Up! Current Level: %d, MaxHP: %f"), PlayerLevel, MaxHP);
 
+    }
+    if (PlayerLevel > BeforeLevel)
+    {
+        ASpartaSurvivalPlayerController* PC = Cast<ASpartaSurvivalPlayerController>(GetWorld()->GetFirstPlayerController());
+        if (PC)
+        {
+            PC->ShowLevelUp();
+        }
     }
 }
 

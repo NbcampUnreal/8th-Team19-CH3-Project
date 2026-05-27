@@ -139,6 +139,11 @@ void ASpartaSurvivalPlayerController::ShowLevelUp()
 		// 화면에 띄우기
 		LevelUpWidgetInstance->AddToViewport();
 
+		if (UFunction* RefreshFunc = LevelUpWidgetInstance->FindFunction(FName("RefreshItems")))
+		{
+			LevelUpWidgetInstance->ProcessEvent(RefreshFunc, nullptr);
+		}
+
 		// 게임 일시정지 (뱀서 스타일)
 		SetPause(true);
 

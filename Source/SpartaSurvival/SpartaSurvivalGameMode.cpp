@@ -89,27 +89,6 @@ void ASpartaSurvivalGameMode::BeginPlay()
 	);
 }
 
-//실시간 정보 관리 (놔둿다 캐릭터에 붙히는게 좋을듯)
-/*void ASpartaSurvivalGameMode::Tick(float DeltaSeconds)
-{
-
-	Super::Tick(DeltaSeconds);
-
-	
-	ASpartaSurvivalCharacter* MyChar = Cast<ASpartaSurvivalCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-
-	if (MyChar)
-	{
-		// 2. HP가 0 이하인지 체크 HP변수명맞추기
-		if (MyChar->HP <= 0.0f)
-		{
-			GameOver();
-
-		
-			PrimaryActorTick.bCanEverTick = false;
-		}
-	}
-}*/
 
 
 //게임시작(나중에 수정)
@@ -117,28 +96,6 @@ void ASpartaSurvivalGameMode::StartGame(FName LevelName)
 {
 	//시작 위젯연결
 	GetWorldTimerManager().SetTimer(MainTimerHandle, this, &ASpartaSurvivalGameMode::HandleMainTimerElapsed, 1.0f, true);
-
-	/* // 적 소환 로직
-		if (EnemyClass) 
-		{
-			FActorSpawnParameters SpawnParams;
-			SpawnParams.Owner = this;
-			SpawnParams.Instigator = GetInstigator();
-
-			// 적을 특정 위치에 소환
-			AActor* SpawnedEnemy = GetWorld()->SpawnActor<AActor>(
-				EnemyClass,
-				SpawnLocation,
-				FRotator::ZeroRotator,
-				SpawnParams
-			);
-
-			if (SpawnedEnemy)
-			{
-				UE_LOG(LogTemp, Warning, TEXT("적 !"));
-			}
-		}*/
-
 }
 //캐릭터 사망
 void ASpartaSurvivalGameMode::GameOver()
@@ -199,28 +156,7 @@ void ASpartaSurvivalGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void ASpartaSurvivalGameMode::HandleMainTimerElapsed()
 {
 	AccumulatedSeconds += 1;
-	//테스트용
-	if (GetWorld())
-	{
-		ASpartaSurvivalGameState* GS = Cast<ASpartaSurvivalGameState>(GetWorld()->GetGameState());
-		if (GS)
-		{
-
-			int32 BeforeLevel = GS->PlayerLevel;
-			GS->AddPlayerEXP(10.f);
-			if (GS->PlayerLevel > BeforeLevel)
-			{
-				ASpartaSurvivalPlayerController* PC = Cast<ASpartaSurvivalPlayerController>(GetWorld()->GetFirstPlayerController());
-				if (PC)
-				{
-
-					PC->ShowLevelUp();
-				}
-			}
-
-
-		}
-	}
+	
 	if (AccumulatedSeconds > 0)
 	{
 		
