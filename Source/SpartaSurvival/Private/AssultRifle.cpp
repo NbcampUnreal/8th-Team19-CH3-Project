@@ -166,6 +166,11 @@ void AAssultRifle::RecoverCam()
 
 	GetWorld()->GetTimerManager().SetTimer(RecoverZoomTimerHandle, [this]()
 		{
+			if (!IsValid(this) || !GetWorld())
+			{
+				return;
+			}
+
 			UCameraComponent* FollowCamera = CurrentCharacter->GetFollowCamera();
 			if (!FollowCamera) return;
 			USceneComponent* CameraParent = FollowCamera->GetAttachParent();

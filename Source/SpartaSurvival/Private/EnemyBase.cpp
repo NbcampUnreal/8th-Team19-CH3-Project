@@ -6,6 +6,7 @@
 #include "DrawDebugHelpers.h"
 #include "SpartaSurvival/SpartaSurvivalCharacter.h"
 #include "Engine/DamageEvents.h"
+#include "SpartaSurvivalGameState.h"
 
 AEnemyBase::AEnemyBase()
 {
@@ -92,6 +93,16 @@ void AEnemyBase::Die()
     {
         PlayAnimMontage(DeathMontage);
     }
+
+    if (GetWorld())
+    {
+        ASpartaSurvivalGameState* MyGameState = Cast<ASpartaSurvivalGameState>(GetWorld()->GetGameState());
+
+        if (MyGameState)
+        {
+            MyGameState->AddPlayerEXP(10.0f);
+        }
+    }
 }
 
 void AEnemyBase::OnDeathAnimationFinished()
@@ -152,8 +163,6 @@ void AEnemyBase::AttackCheck()
             }
         }
     }
-
-    DrawDebugSphere(GetWorld(), End, SphereRadius, 16, DebugColor, false, 0.5f);
 }
 
 void AEnemyBase::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
