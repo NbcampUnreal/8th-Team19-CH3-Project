@@ -300,7 +300,6 @@ void AAssultRifle::EquipToCharacter(ASpartaSurvivalCharacter* Character)
 	// 샷건 Actor 전체를 이동해서 GripPoint를 WeaponSocket 위치에 맞춤
 	AddActorWorldOffset(Delta);
 
-	ShowCrosshair();
 	SpawnMagazine();
 
 }
@@ -593,6 +592,7 @@ void AAssultRifle::Zoom(bool bIsZoom)
 		bIsScoped = true;
 		CurrentCharacter->GetFollowCamera()->SetFieldOfView(55.f);
 
+		ShowCrosshair();
 		ZoomCam();
 	}
 	else
@@ -601,6 +601,7 @@ void AAssultRifle::Zoom(bool bIsZoom)
 		bIsScoped = false;
 		CurrentCharacter->GetFollowCamera()->SetFieldOfView(90.f);
 
+		HideCrosshair();
 		RecoverCam();
 	}
 }
